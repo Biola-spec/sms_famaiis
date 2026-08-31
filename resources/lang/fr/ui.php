@@ -179,5 +179,8 @@ return [
     'waiting_to_start' => 'En attente de démarrage',
     'host' => 'Hôte',
     'scheduled' => 'Programmé',
+    'next_event' => 'Prochain événement',
+    'class_gallery' => 'Galerie de classe',
+    'elibrary' => 'Bibliothèque numérique',
 ];
 

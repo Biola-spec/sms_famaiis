@@ -94,6 +94,10 @@ class QuizController extends Controller
             'title' => 'required|string|max:255',
             'duration' => 'required|integer|min:1',
             'retake_limit' => 'required|integer|min:1',
+            'exam_date' => 'nullable|date',
+            'exam_time' => 'nullable',
+            'exam_end_date' => 'nullable|date',
+            'exam_end_time' => 'nullable',
         ]);
 
         if (!$this->canUseClass((int) $request->class_id)) {
@@ -103,6 +107,21 @@ class QuizController extends Controller
             ]);
         }
 
+        $startsAt = $this->resolveStartsAt($request);
+        $duration = (int) $request->duration;
+
+        if ($startsAt && $request->filled('exam_end_date')) {
+            $endTimeStr = $request->filled('exam_end_time') ? $request->exam_end_time : '00:00';
+            $endsAtCalc = \Carbon\Carbon::parse($request->exam_end_date . ' ' . $endTimeStr);
+            if ($endsAtCalc->gt($startsAt)) {
+                $duration = $startsAt->diffInMinutes($endsAtCalc);
+            }
+        }
+
+        if ($overlap = $this->overlapRedirect((int) $request->class_id, $startsAt, $duration)) {
+            return $overlap;
+        }
+
         $quiz = Quiz::create([
             'class_id' => $request->class_id,
             'section_id' => $request->section_id,
@@ -110,7 +129,8 @@ class QuizController extends Controller
             'subject_id' => $request->subject_id,
             'term' => $request->term,
             'title' => $request->title,
-            'duration' => $request->duration,
+            'duration' => $duration,
+            'starts_at' => $startsAt,
             'retake_limit' => $request->retake_limit,
             'created_by' => Auth::id(),
             'status' => 'locked', // start locked until questions are added
@@ -161,11 +181,16 @@ class QuizController extends Controller
         $request->validate([
             'class_id' => 'required|exists:student_classes,id',
             'section_id' => 'nullable|exists:school_sections,id',
+            'student_id' => 'nullable|exists:users,id',
             'subject_id' => 'required|exists:school_subjects,id',
             'term' => ['required', \Illuminate\Validation\Rule::in(['1st Term', '2nd Term', '3rd Term'])],
             'title' => 'required|string|max:255',
             'duration' => 'required|integer|min:1',
             'retake_limit' => 'required|integer|min:1',
+            'exam_date' => 'nullable|date',
+            'exam_time' => 'nullable',
+            'exam_end_date' => 'nullable|date',
+            'exam_end_time' => 'nullable',
         ]);
 
         if (!$this->canUseClass((int) $request->class_id)) {
@@ -175,7 +200,32 @@ class QuizController extends Controller
             ]);
         }
 
-        $quiz->update($request->all());
+        $startsAt = $this->resolveStartsAt($request);
+        $duration = (int) $request->duration;
+
+        if ($startsAt && $request->filled('exam_end_date')) {
+            $endTimeStr = $request->filled('exam_end_time') ? $request->exam_end_time : '00:00';
+            $endsAtCalc = \Carbon\Carbon::parse($request->exam_end_date . ' ' . $endTimeStr);
+            if ($endsAtCalc->gt($startsAt)) {
+                $duration = $startsAt->diffInMinutes($endsAtCalc);
+            }
+        }
+
+        if ($overlap = $this->overlapRedirect((int) $request->class_id, $startsAt, $duration, (int) $quiz->id)) {
+            return $overlap;
+        }
+
+        $quiz->update([
+            'class_id' => $request->class_id,
+            'section_id' => $request->section_id,
+            'student_id' => $request->student_id,
+            'subject_id' => $request->subject_id,
+            'term' => $request->term,
+            'title' => $request->title,
+            'duration' => $duration,
+            'starts_at' => $startsAt,
+            'retake_limit' => $request->retake_limit,
+        ]);
 
         return redirect()->route('academic.cbt.index')->with([
             'message' => 'Quiz setup updated successfully.',
@@ -600,6 +650,35 @@ class QuizController extends Controller
             'message' => 'Quiz status updated to ' . $request->status,
             'alert-type' => 'success'
         ]);
+    }
+
+    private function resolveStartsAt(Request $request)
+    {
+        if (!$request->filled('exam_date')) {
+            return null;
+        }
+
+        $time = $request->filled('exam_time') ? $request->exam_time : '00:00';
+
+        return \Carbon\Carbon::parse($request->exam_date . ' ' . $time);
+    }
+
+    private function overlapRedirect(int $classId, $startsAt, int $duration, ?int $ignoreId = null)
+    {
+        if (!$startsAt) {
+            return null;
+        }
+
+        $endsAt = $startsAt->copy()->addMinutes($duration);
+
+        if (Quiz::hasScheduleOverlap($classId, $startsAt, $endsAt, $ignoreId)) {
+            return redirect()->back()->withInput()->with([
+                'message' => 'This class already has a CBT exam scheduled that overlaps this time.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        return null;
     }
 
     private function authorizeQuiz(Quiz $quiz): void

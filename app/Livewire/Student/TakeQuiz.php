@@ -20,6 +20,13 @@ class TakeQuiz extends Component
 
     public function mount(Quiz $quiz)
     {
+        if (!$quiz->isAvailableToTake()) {
+            return redirect()->route('student.cbt.index')->with([
+                'message' => 'This quiz is locked until ' . optional($quiz->starts_at)->format('M d, Y h:i A') . '.',
+                'alert-type' => 'error',
+            ]);
+        }
+
         $this->quiz = $quiz->load(['questions', 'passages']);
         $this->questions = $this->quiz->questions;
         

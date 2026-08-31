@@ -31,7 +31,11 @@
                                                 <p><strong>Term:</strong> {{ $quiz->term }}</p>
                                                 <p><strong>Duration:</strong> {{ $quiz->duration }} Minutes</p>
                                                 <p><strong>Attempts:</strong> {{ $used }} / {{ $quiz->retake_limit }}</p>
+                                                @if($quiz->starts_at)
+                                                    <p><strong>Starts:</strong> {{ $quiz->starts_at->format('M d, Y h:i A') }}</p>
+                                                @endif
                                                 <hr>
+                                                @php $canTake = $quiz->isAvailableToTake(); @endphp
                                                 @if($latestCompleted)
                                                     <p class="text-success font-weight-bold">Latest Score: {{ $latestCompleted->score }}</p>
                                                     <div class="row">
@@ -39,13 +43,20 @@
                                                             <a href="{{ route('student.cbt.result', $latestCompleted->id) }}" class="btn btn-block btn-info btn-sm">Result</a>
                                                         </div>
                                                         <div class="col-6">
-                                                            @if($used < $quiz->retake_limit)
+                                                            @if($used < $quiz->retake_limit && $canTake)
                                                                 <a href="{{ route('student.cbt.take', $quiz->id) }}" class="btn btn-block btn-success btn-sm">Retake</a>
+                                                            @elseif($used < $quiz->retake_limit)
+                                                                <button class="btn btn-block btn-secondary btn-sm" disabled>Locked until start</button>
                                                             @endif
                                                         </div>
                                                     </div>
-                                                @else
+                                                    @if($latestCompleted->quiz && $quiz->reviewIsUnlocked())
+                                                        <a href="{{ route('student.cbt.result.download', $latestCompleted->id) }}" class="btn btn-block btn-outline-primary btn-sm mt-2">Download PDF</a>
+                                                    @endif
+                                                @elseif($canTake)
                                                     <a href="{{ route('student.cbt.take', $quiz->id) }}" class="btn btn-block btn-success">Take Quiz</a>
+                                                @else
+                                                    <div class="alert alert-warning mb-0">Locked until {{ optional($quiz->starts_at)->format('M d, Y h:i A') }}</div>
                                                 @endif
                                             </div>
                                         </div>

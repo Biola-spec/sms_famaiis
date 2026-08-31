@@ -179,5 +179,8 @@ return [
     'waiting_to_start' => 'Waiting to Start',
     'host' => 'Host',
     'scheduled' => 'Scheduled',
+    'next_event' => 'Next event',
+    'class_gallery' => 'Class gallery',
+    'elibrary' => 'E-library',
 ];
 

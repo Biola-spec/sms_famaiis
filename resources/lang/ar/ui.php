@@ -179,5 +179,8 @@ return [
     'waiting_to_start' => 'بانتظار البدء',
     'host' => 'المضيف',
     'scheduled' => 'مجدول',
+    'next_event' => 'الفعالية التالية',
+    'class_gallery' => 'معرض الصف',
+    'elibrary' => 'المكتبة الإلكترونية',
 ];
 

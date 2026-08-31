@@ -265,6 +265,16 @@
         <i data-feather="file-text"></i> <span>{{ __('ui.home_work') }}</span>
     </a>
 </li>
+<li class="{{ ($prefix == '/library')?'active':'' }}">
+    <a href="{{ route('library.index') }}">
+        <i data-feather="folder"></i> <span>{{ __('ui.elibrary') }}</span>
+    </a>
+</li>
+<li class="{{ ($prefix == '/class-gallery')?'active':'' }}">
+    <a href="{{ route('class.gallery.index') }}">
+        <i data-feather="image"></i> <span>{{ __('ui.class_gallery') }}</span>
+    </a>
+</li>
 @endif
 
 

@@ -74,6 +74,13 @@ class CbtController extends Controller
             ]);
         }
 
+        if (!$quiz->isAvailableToTake()) {
+            return redirect()->route('student.cbt.index')->with([
+                'message' => 'This quiz is locked until ' . optional($quiz->starts_at)->format('M d, Y h:i A') . '.',
+                'alert-type' => 'error'
+            ]);
+        }
+
         $attempts = QuizAttempt::where('student_id', Auth::id())
             ->where('quiz_id', $quiz->id)
             ->where('status', 'completed')
@@ -95,8 +102,38 @@ class CbtController extends Controller
             abort(403);
         }
 
-        $attempt->load(['quiz.subject', 'answers.question']);
+        $attempt->load(['quiz.subject']);
+        $attempt->quiz->loadCount('questions');
 
-        return view('student.cbt.result', compact('attempt'));
+        $reviewUnlocked = $attempt->quiz->reviewIsUnlocked();
+        if ($reviewUnlocked) {
+            $attempt->load('answers.question');
+        }
+
+        return view('student.cbt.result', compact('attempt', 'reviewUnlocked'));
+    }
+
+    public function download(QuizAttempt $attempt)
+    {
+        if ($attempt->student_id !== Auth::id()) {
+            abort(403);
+        }
+
+        $attempt->load(['quiz.subject']);
+
+        if (!$attempt->quiz->reviewIsUnlocked()) {
+            return redirect()->route('student.cbt.result', $attempt->id)->with([
+                'message' => 'Full review is available after ' . optional($attempt->quiz->examEndTime())->format('M d, Y h:i A') . '.',
+                'alert-type' => 'error',
+            ]);
+        }
+
+        $attempt->load('answers.question');
+        $attempt->quiz->loadCount('questions');
+        $reviewUnlocked = true;
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('student.cbt.result_pdf', compact('attempt', 'reviewUnlocked'));
+
+        return $pdf->download('cbt-result-' . $attempt->id . '.pdf');
     }
 }

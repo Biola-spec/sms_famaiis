@@ -24,6 +24,7 @@
                                             <th>Questions</th>
                                             <th>Term</th>
                                             <th>Duration</th>
+                                            <th>Schedule</th>
                                             <th>Status</th>
                                             <th>Action</th>
                                         </tr>
@@ -40,6 +41,16 @@
                                             <td><span class="badge badge-pill badge-primary">{{ $quiz->questions_count }} Uploaded</span></td>
                                             <td>{{ $quiz->term }}</td>
                                             <td>{{ $quiz->duration }} mins</td>
+                                            <td>
+                                                @if($quiz->starts_at)
+                                                    {{ $quiz->starts_at->format('M d, Y H:i') }}
+                                                    @if($quiz->ends_at)
+                                                        <br><small>Ends {{ $quiz->ends_at->format('H:i') }}</small>
+                                                    @endif
+                                                @else
+                                                    <span class="text-muted">Unscheduled</span>
+                                                @endif
+                                            </td>
                                             <td>
                                                 <span class="badge badge-{{ $quiz->status == 'published' ? 'success' : 'warning' }}">
                                                     {{ ucfirst($quiz->status) }}

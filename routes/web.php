@@ -582,8 +582,9 @@ Route::middleware(['auth', 'permission:view_results|view-results|upload_results|
     Route::get('assessment', [App\Http\Controllers\Backend\Academic\ClassTeacherAssessmentController::class, 'index'])->name('academic.assessment.index');
     Route::post('assessment/load', [App\Http\Controllers\Backend\Academic\ClassTeacherAssessmentController::class, 'loadStudents'])->name('academic.assessment.load');
     Route::post('assessment/store', [App\Http\Controllers\Backend\Academic\ClassTeacherAssessmentController::class, 'store'])->name('academic.assessment.store');
+});
 
-    // CBT Routes (Teacher/Admin)
+Route::middleware(['auth', 'role:Admin,Teacher', 'academic.context'])->prefix('academic')->group(function () {
     Route::get('cbt', [\App\Http\Controllers\Backend\Academic\QuizController::class, 'index'])->name('academic.cbt.index');
     Route::get('cbt/create', [\App\Http\Controllers\Backend\Academic\QuizController::class, 'create'])->name('academic.cbt.create');
     Route::post('cbt/store', [\App\Http\Controllers\Backend\Academic\QuizController::class, 'store'])->name('academic.cbt.store');
@@ -594,7 +595,7 @@ Route::middleware(['auth', 'permission:view_results|view-results|upload_results|
     Route::get('cbt/question/{question}/edit', [\App\Http\Controllers\Backend\Academic\QuizController::class, 'editQuestion'])->name('academic.cbt.editQuestion');
     Route::post('cbt/question/{question}/update', [\App\Http\Controllers\Backend\Academic\QuizController::class, 'updateQuestion'])->name('academic.cbt.updateQuestion');
     Route::delete('cbt/question/{question}', [\App\Http\Controllers\Backend\Academic\QuizController::class, 'deleteQuestion'])->name('academic.cbt.deleteQuestion');
-    
+
     Route::post('cbt/{quiz}/passage', [\App\Http\Controllers\Backend\Academic\QuizController::class, 'addPassage'])->name('academic.cbt.addPassage');
     Route::get('cbt/passage/{passage}/edit', [\App\Http\Controllers\Backend\Academic\QuizController::class, 'editPassage'])->name('academic.cbt.editPassage');
     Route::post('cbt/passage/{passage}/update', [\App\Http\Controllers\Backend\Academic\QuizController::class, 'updatePassage'])->name('academic.cbt.updatePassage');
@@ -620,6 +621,21 @@ Route::middleware(['auth'])->prefix('homework')->group(function(){
     Route::post('/submission/store', [SubmissionController::class, 'SubmissionStore'])->name('homework.submission.store');
     Route::get('/submission/view/{homework_id}', [SubmissionController::class, 'SubmissionView'])->name('homework.submission.view');
     Route::get('/submission/download/{id}', [SubmissionController::class, 'SubmissionDownload'])->name('homework.submission.download');
+});
+
+Route::middleware(['auth'])->prefix('class-gallery')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Backend\Academic\ClassGalleryController::class, 'index'])->name('class.gallery.index');
+    Route::get('/{class}', [\App\Http\Controllers\Backend\Academic\ClassGalleryController::class, 'show'])->name('class.gallery.show');
+    Route::post('/{class}', [\App\Http\Controllers\Backend\Academic\ClassGalleryController::class, 'store'])->name('class.gallery.store');
+    Route::delete('/photo/{photo}', [\App\Http\Controllers\Backend\Academic\ClassGalleryController::class, 'destroy'])->name('class.gallery.destroy');
+});
+
+Route::middleware(['auth'])->prefix('library')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Backend\Academic\LibraryResourceController::class, 'index'])->name('library.index');
+    Route::get('/create', [\App\Http\Controllers\Backend\Academic\LibraryResourceController::class, 'create'])->name('library.create');
+    Route::post('/', [\App\Http\Controllers\Backend\Academic\LibraryResourceController::class, 'store'])->name('library.store');
+    Route::get('/{resource}/download', [\App\Http\Controllers\Backend\Academic\LibraryResourceController::class, 'download'])->name('library.download');
+    Route::delete('/{resource}', [\App\Http\Controllers\Backend\Academic\LibraryResourceController::class, 'destroy'])->name('library.destroy');
 });
 
 // FamaiisStudyHub Platform Routes
@@ -863,6 +879,7 @@ Route::middleware(['auth', 'role:Student', 'academic.context'])->prefix('student
     Route::get('cbt', [\App\Http\Controllers\Student\CbtController::class, 'index'])->name('student.cbt.index');
     Route::get('cbt/{quiz}/take', [\App\Http\Controllers\Student\CbtController::class, 'take'])->name('student.cbt.take');
     Route::get('cbt/result/{attempt}', [\App\Http\Controllers\Student\CbtController::class, 'result'])->name('student.cbt.result');
+    Route::get('cbt/result/{attempt}/download', [\App\Http\Controllers\Student\CbtController::class, 'download'])->name('student.cbt.result.download');
 });
 
 Route::middleware(['auth', 'role:Admin,Teacher'])->prefix('ai')->group(function () {
