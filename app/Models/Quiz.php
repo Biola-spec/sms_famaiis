@@ -126,7 +126,7 @@ class Quiz extends Model
 
     public function questions()
     {
-        return $this->hasMany(Question::class);
+        return $this->hasMany(Question::class)->orderBy('id');
     }
 
     public function passages()

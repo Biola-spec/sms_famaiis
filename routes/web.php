@@ -587,6 +587,7 @@ Route::middleware(['auth', 'permission:view_results|view-results|upload_results|
 Route::middleware(['auth', 'role:Admin,Teacher', 'academic.context'])->prefix('academic')->group(function () {
     Route::get('cbt', [\App\Http\Controllers\Backend\Academic\QuizController::class, 'index'])->name('academic.cbt.index');
     Route::get('cbt/create', [\App\Http\Controllers\Backend\Academic\QuizController::class, 'create'])->name('academic.cbt.create');
+    Route::get('cbt/options', [\App\Http\Controllers\Backend\Academic\QuizController::class, 'formOptions'])->name('academic.cbt.options');
     Route::post('cbt/store', [\App\Http\Controllers\Backend\Academic\QuizController::class, 'store'])->name('academic.cbt.store');
     Route::get('cbt/{quiz}/edit', [\App\Http\Controllers\Backend\Academic\QuizController::class, 'edit'])->name('academic.cbt.edit');
     Route::post('cbt/{quiz}/update', [\App\Http\Controllers\Backend\Academic\QuizController::class, 'update'])->name('academic.cbt.update');

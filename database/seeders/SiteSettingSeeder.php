@@ -14,9 +14,9 @@ class SiteSettingSeeder extends Seeder
      */
     public function run()
     {
-        DB::table('site_settings')->insert([
+        DB::table('site_settings')->updateOrInsert(
+            ['id' => 1],
             [
-                'id' => 1,
                 'school_name' => 'Easy School Management',
                 'school_email' => 'support@easysms.com',
                 'school_mobile_one' => '0123456789',
@@ -26,6 +26,6 @@ class SiteSettingSeeder extends Seeder
                 'logo' => 'upload/logo/no_image.jpg',
                 'copyright' => 'Copyright © 2024 Easy SMS. All Right Reserved',
             ]
-        ]);
+        );
     }
 }

@@ -13,7 +13,9 @@ return new class extends Migration
             $table->unsignedBigInteger('term_id')->nullable()->after('year_id');
 
             $table->foreign('year_id')->references('id')->on('student_years')->nullOnDelete();
-            $table->foreign('term_id')->references('id')->on('terms')->nullOnDelete();
+            if (Schema::hasTable('terms')) {
+                $table->foreign('term_id')->references('id')->on('terms')->nullOnDelete();
+            }
             $table->index('year_id');
             $table->index('term_id');
         });

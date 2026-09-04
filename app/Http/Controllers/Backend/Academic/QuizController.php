@@ -4,13 +4,18 @@ namespace App\Http\Controllers\Backend\Academic;
 
 use App\Http\Controllers\Controller;
 
+use App\Models\AssignClassTeacher;
+use App\Models\AssignStudent;
+use App\Models\AssignSubject;
 use App\Models\Question;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Models\Passage;
+use App\Models\SchoolSection;
 use App\Models\StudentAnswer;
 use App\Models\SchoolSubject;
 use App\Models\StudentClass;
+use App\Models\StudentSection;
 use App\Models\TeacherAssignment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -81,6 +86,159 @@ class QuizController extends Controller
         $terms = ['1st Term', '2nd Term', '3rd Term'];
 
         return view('backend.academic.cbt.create', compact('classes', 'terms', 'activeYear'));
+    }
+
+    public function formOptions(Request $request)
+    {
+        $request->validate([
+            'class_id' => 'required|exists:student_classes,id',
+            'section_id' => 'nullable|exists:school_sections,id',
+        ]);
+
+        $classId = (int) $request->class_id;
+        abort_unless($this->canUseClass($classId), 403);
+
+        $user = Auth::user();
+        $isAdmin = $user->hasRole('Admin') || $user->role === 'Admin';
+        $sectionId = $request->filled('section_id') ? (int) $request->section_id : null;
+
+        $sectionIds = collect();
+        $class = StudentClass::find($classId);
+        if ($class && $class->section_id) {
+            $sectionIds->push($class->section_id);
+        }
+
+        $sectionIds = $sectionIds
+            ->merge(StudentSection::where('class_id', $classId)->pluck('section_id'))
+            ->merge(AssignClassTeacher::where('class_id', $classId)->pluck('section_id'))
+            ->merge(TeacherAssignment::where('class_id', $classId)->pluck('section_id'))
+            ->merge(AssignSubject::where('class_id', $classId)->pluck('section_id'))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if (!$isAdmin) {
+            $teacherSectionIds = AssignClassTeacher::where('teacher_id', $user->id)->where('class_id', $classId)->pluck('section_id')
+                ->merge(TeacherAssignment::where('teacher_id', $user->id)->where('class_id', $classId)->pluck('section_id'))
+                ->filter()
+                ->unique();
+
+            if ($teacherSectionIds->isNotEmpty()) {
+                $sectionIds = $sectionIds->intersect($teacherSectionIds)->values();
+                if ($sectionIds->isEmpty()) {
+                    $sectionIds = $teacherSectionIds->values();
+                }
+            }
+        }
+
+        $sections = $sectionIds->isNotEmpty()
+            ? SchoolSection::whereIn('id', $sectionIds)->orderBy('name')->get(['id', 'name'])
+            : collect();
+
+        if ($sections->isEmpty()) {
+            $sections = $isAdmin
+                ? SchoolSection::orderBy('name')->get(['id', 'name'])
+                : SchoolSection::orderBy('name')->get(['id', 'name']);
+        }
+
+        $subjectQuery = AssignSubject::with('school_subject')->where('class_id', $classId);
+        if ($sectionId) {
+            $subjectQuery->where(function ($q) use ($sectionId) {
+                $q->where('section_id', $sectionId)->orWhereNull('section_id');
+            });
+        }
+        if (!$isAdmin) {
+            $teacherSubjectIds = TeacherAssignment::where('teacher_id', $user->id)
+                ->where('class_id', $classId)
+                ->when($sectionId, function ($q) use ($sectionId) {
+                    $q->where(function ($sectionQuery) use ($sectionId) {
+                        $sectionQuery->where('section_id', $sectionId)->orWhereNull('section_id');
+                    });
+                })
+                ->pluck('subject_id');
+
+            $assignedSubjectIds = AssignSubject::where('teacher_id', $user->id)
+                ->where('class_id', $classId)
+                ->pluck('subject_id');
+
+            $allowed = $teacherSubjectIds->merge($assignedSubjectIds)->filter()->unique();
+            if ($allowed->isNotEmpty()) {
+                $subjectQuery->whereIn('subject_id', $allowed);
+            }
+        }
+
+        $subjects = collect();
+        foreach ($subjectQuery->get() as $row) {
+            $sub = $row->school_subject;
+            if ($sub && !$subjects->has($sub->id)) {
+                $subjects->put($sub->id, ['id' => $sub->id, 'name' => $sub->name]);
+            }
+        }
+
+        if ($subjects->isEmpty()) {
+            $fallbackIds = TeacherAssignment::where('teacher_id', $user->id)->where('class_id', $classId)->pluck('subject_id');
+            $fallback = $isAdmin || $fallbackIds->isEmpty()
+                ? SchoolSubject::orderBy('name')->get(['id', 'name'])
+                : SchoolSubject::whereIn('id', $fallbackIds)->orderBy('name')->get(['id', 'name']);
+            foreach ($fallback as $sub) {
+                $subjects->put($sub->id, ['id' => $sub->id, 'name' => $sub->name]);
+            }
+        }
+
+        $yearId = $request->year_id;
+        if (empty($yearId)) {
+            $session = getCurrentSession();
+            $yearId = $session ? $session->id : null;
+        }
+
+        $studentQuery = AssignStudent::with('student')->where('class_id', $classId);
+        if (!empty($yearId)) {
+            $studentQuery->where('year_id', $yearId);
+        }
+        if ($sectionId) {
+            $studentIds = StudentSection::where('section_id', $sectionId)
+                ->when($classId, fn ($q) => $q->where(function ($inner) use ($classId) {
+                    $inner->where('class_id', $classId)->orWhereNull('class_id');
+                }))
+                ->pluck('student_id');
+            $studentQuery->whereIn('student_id', $studentIds);
+        }
+
+        $assigned = $studentQuery->get();
+        if ($assigned->isEmpty() && !empty($yearId)) {
+            $fallbackQuery = AssignStudent::with('student')->where('class_id', $classId);
+            if ($sectionId) {
+                $studentIds = StudentSection::where('section_id', $sectionId)->pluck('student_id');
+                $fallbackQuery->whereIn('student_id', $studentIds);
+            }
+            $assigned = $fallbackQuery->get();
+        }
+
+        $students = collect();
+        foreach ($assigned as $row) {
+            $st = $row->student;
+            if (!$st || $students->has($st->id)) {
+                continue;
+            }
+            $name = trim((string) ($st->name ?? ''));
+            if ($name === '') {
+                $name = trim(($st->fname ?? '') . ' ' . ($st->mname ?? '') . ' ' . ($st->surname ?? ''));
+            }
+            if ($name === '') {
+                $name = $st->email ?? ('Student #' . $st->id);
+            }
+            $students->put($st->id, [
+                'id' => $st->id,
+                'name' => $name,
+                'id_no' => $st->id_no ?? '',
+            ]);
+        }
+
+        return response()->json([
+            'sections' => $sections->values(),
+            'subjects' => $subjects->values(),
+            'students' => $students->values(),
+        ]);
     }
 
     public function store(Request $request)

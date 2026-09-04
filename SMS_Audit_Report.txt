@@ -1,0 +1,254 @@
+================================================================================
+COMPREHENSIVE TECHNICAL AUDIT REPORT: LARAVEL SCHOOL MANAGEMENT SYSTEM (SMS)
+================================================================================
+Project Path: c:\xampp\htdocs\portal
+Audit Date: September 1, 2026
+
+--------------------------------------------------------------------------------
+1. LARAVEL VERSION
+--------------------------------------------------------------------------------
+* Framework Version: Laravel 11.x (laravel/framework: ^11.0 specified in composer.json)
+
+--------------------------------------------------------------------------------
+2. PHP VERSION
+--------------------------------------------------------------------------------
+* CLI Installed Version: PHP 8.2.12
+* Composer Constraint: ^8.2 (Specified in composer.json)
+
+--------------------------------------------------------------------------------
+3. EXISTING ARCHITECTURE
+--------------------------------------------------------------------------------
+* Framework & Architecture: Standard Laravel MVC pattern utilizing Blade templates for the admin dashboard.
+* Frontend Tech Stack: Livewire 3 (livewire/livewire: ^3.0), Laravel Jetstream 5 (laravel/jetstream: ^5.0), Bootstrap/AdminLTE/Custom Blade views under resources/views/backend/.
+* Export/Import Engine: maatwebsite/excel: 3.1.60, barryvdh/laravel-dompdf: ^3.0, and phpoffice/phpword: ^1.4.
+* Multi-Section Isolation: School levels/sections (e.g., Early Years, Primary, Secondary) are managed via SchoolSection with multi-section pivot tables student_section and teacher_section.
+* Role & Permission Management: Custom RBAC system using Role and Permission models alongside legacy role and usertype string columns on the users table.
+* Internal Modules: Includes internal Academic Marksheets, Attendance, E-Wallet, Fee Management, Homework/Submissions, Messaging/Chat, and an internal Quiz/CBT engine (Quiz, Question, QuizAttempt).
+
+--------------------------------------------------------------------------------
+4. STUDENT STRUCTURE
+--------------------------------------------------------------------------------
+* Model Name: User (App\Models\User)
+* Table Name: users
+* Primary Key: id (Bigint Unsigned, Auto-increment)
+* Important Fields: id, id_no (School Admission/Registration No string), name, first_name, surname, middle_name, email, password, code (Plain text/reset credential string), mobile, gender, dob, address, image, nin, state, lga, country, usertype (Student), role, status (1 = active, 0 = inactive), section_id.
+* Relationships:
+  - studentClassAssignments() -> hasMany(AssignStudent::class, 'student_id', 'id')
+  - sections() -> belongsToMany(SchoolSection::class, 'student_section', 'student_id', 'section_id')
+  - parents() -> belongsToMany(User::class, 'parent_student', 'student_id', 'parent_id')
+  - roles() -> belongsToMany(Role::class)
+  - studentFees() -> hasMany(StudentFee::class, 'student_id')
+* Foreign Keys: section_id references school_sections.id
+* Soft Deletes Used: No (Standard deletions with status flags).
+
+--------------------------------------------------------------------------------
+5. CLASS STRUCTURE
+--------------------------------------------------------------------------------
+* Model Name: StudentClass (App\Models\StudentClass)
+* Table Name: student_classes
+* Primary Key: id (Bigint Unsigned, Auto-increment)
+* Important Fields: id, name (Unique string, e.g., "JSS1", "SS1A"), section_id (Nullable Bigint Unsigned).
+* Relationships:
+  - section() -> belongsTo(SchoolSection::class, 'section_id', 'id')
+* Foreign Keys: section_id references school_sections.id
+* Soft Deletes Used: No
+
+--------------------------------------------------------------------------------
+6. SUBJECT STRUCTURE
+--------------------------------------------------------------------------------
+* Model Name: SchoolSubject (App\Models\SchoolSubject)
+* Table Name: school_subjects
+* Primary Key: id (Bigint Unsigned, Auto-increment)
+* Important Fields: id, name (Unique string, e.g., "Mathematics", "English Language"), section_id (Nullable Bigint Unsigned).
+* Relationships:
+  - section() -> belongsTo(SchoolSection::class, 'section_id', 'id')
+* Foreign Keys: section_id references school_sections.id
+* Soft Deletes Used: No
+
+--------------------------------------------------------------------------------
+7. TEACHER STRUCTURE
+--------------------------------------------------------------------------------
+* Model Name: User (App\Models\User)
+* Table Name: users
+* Primary Key: id (Bigint Unsigned, Auto-increment)
+* Important Fields: id, id_no (Employee ID number), name, first_name, surname, middle_name, email, password, mobile, gender, join_date, designation_id, salary, usertype (Employee), role, status.
+* Relationships:
+  - designation() -> belongsTo(Designation::class, 'designation_id', 'id')
+  - teacherAssignments() -> hasMany(TeacherAssignment::class, 'teacher_id')
+  - teacherSections() -> belongsToMany(SchoolSection::class, 'teacher_section', 'teacher_id', 'section_id')
+* Foreign Keys: designation_id references designations.id
+* Soft Deletes Used: No
+
+--------------------------------------------------------------------------------
+8. ACADEMIC SESSION/TERM STRUCTURE
+--------------------------------------------------------------------------------
+* Academic Session Model: StudentYear (App\Models\StudentYear)
+  - Table Name: student_years
+  - Primary Key: id (Bigint Unsigned, Auto-increment)
+  - Important Fields: id, name (e.g., "2025-2026"), is_active (boolean).
+  - Relationships: terms() -> hasMany(Term::class, 'student_year_id'), asSessionTerms() -> hasMany(Term::class, 'session_id').
+  - Foreign Keys: None.
+  - Soft Deletes Used: No
+* Term Model: Term (App\Models\Term)
+  - Table Name: terms
+  - Primary Key: id (Bigint Unsigned, Auto-increment)
+  - Important Fields: id, name (e.g., "First Term"), student_year_id / session_id, is_active (boolean).
+  - Relationships: academic_year() -> belongsTo(StudentYear::class), session() -> belongsTo(StudentYear::class).
+  - Foreign Keys: student_year_id and session_id reference student_years.id.
+  - Soft Deletes Used: No
+
+--------------------------------------------------------------------------------
+9. AUTHENTICATION
+--------------------------------------------------------------------------------
+* Web Admin/Portal Authentication: Session-based auth via Laravel Fortify / Jetstream (web middleware group in Kernel.php).
+* API Authentication: Laravel Sanctum (laravel/sanctum: ^4.0 in composer.json), handling bearer tokens (auth:sanctum guard in routes/api.php).
+* Password Hashing: Standard Bcrypt via Laravel Hash facade.
+
+--------------------------------------------------------------------------------
+10. EXISTING API ARCHITECTURE
+--------------------------------------------------------------------------------
+* Route Definitions: Located in routes/api.php.
+* API Auth Mechanism: Sanctum Token Auth via AuthController@login.
+* Middleware Stack: 'throttle:api' and \Illuminate\Routing\Middleware\SubstituteBindings::class.
+* Versioning: Currently unversioned (/api/login, /api/student/dashboard).
+* Response Format: Direct array JSON via response()->json(...).
+* API Resources / Transformers: None present in app/Http/Resources (folder does not exist yet).
+* Rate Limiting: Default Laravel Sanctum API throttle (60 requests per minute).
+
+--------------------------------------------------------------------------------
+11. STUDENT IDENTIFICATION STRATEGY
+--------------------------------------------------------------------------------
+* Internal Primary Key: users.id (Integer - immutable database primary key).
+* Human-Readable School Key: users.id_no (String - Admission / Registration Number).
+* Cross-System Identity Resolution:
+  Google Classroom User ID (or Google Email)
+  ↓ [mapped in SMS users.google_id / google_classroom_student_mappings]
+  Laravel SMS Student ID (users.id & users.id_no)
+  ↓ [passed via Secure API bearer token & student_id payload]
+  CBT Student Identifier (sms_student_id & admission_no)
+
+* Identity Safety: The CBT system must use sms_student_id (users.id) and admission_no (users.id_no) as immutable unique identifiers. Student names will be strictly metadata display fields and never used for entity resolution or lookup.
+
+--------------------------------------------------------------------------------
+12. RECOMMENDED GOOGLE CLASSROOM ARCHITECTURE
+--------------------------------------------------------------------------------
+To keep the SMS maintainable and decoupled, integration logic should reside inside a dedicated namespace: app/Services/GoogleClassroom/.
+
+app/Services/GoogleClassroom/
+├── GoogleClassroomAuthService.php      # Handles OAuth token exchange, consent, and token refreshing
+├── GoogleClassroomService.php          # Wrapper around Google Classroom API (Courses, CourseWork, Rosters)
+├── GoogleClassroomSyncService.php      # Orchestrates mapping & syncing Google Courses/Students to SMS
+└── GoogleClassroomStudentMatcher.php   # Resolves Google accounts to SMS students by google_id, email, or id_no
+
+--------------------------------------------------------------------------------
+13. REQUIRED DATABASE CHANGES
+--------------------------------------------------------------------------------
+* New Migration: add_google_fields_to_users_table
+  - Add google_id (string, nullable, unique, indexed)
+  - Add google_email (string, nullable, indexed)
+* New Migration: create_google_classroom_tokens_table
+  - id, user_id (admin/teacher FK), access_token (text), refresh_token (text), expires_at (timestamp).
+* New Migration: create_google_classroom_courses_table
+  - id, google_course_id (string, unique), course_name (string), class_id (FK student_classes.id), subject_id (FK school_subjects.id), section_id (FK school_sections.id), student_year_id (FK student_years.id), sync_roster (boolean).
+* New Migration: create_google_classroom_student_mappings_table
+  - id, google_course_id (string), google_user_id (string), student_id (FK users.id), sync_status (string).
+* New Migration: create_cbt_clients_table (or Sanctum token abilities for CBT)
+  - Store CBT API client keys, token secret hashes, and allowed IP restrictions.
+
+--------------------------------------------------------------------------------
+14. REQUIRED LARAVEL SERVICES
+--------------------------------------------------------------------------------
+* App\Services\GoogleClassroom\GoogleClassroomAuthService
+* App\Services\GoogleClassroom\GoogleClassroomService
+* App\Services\GoogleClassroom\GoogleClassroomSyncService
+* App\Services\GoogleClassroom\GoogleClassroomStudentMatcher
+* App\Services\Cbt\CbtIntegrationService (Handles payload validation, data formatting, and mark sync for external CBT)
+* App\Http\Resources\Api\V1\StudentResource (Sanitizes student data for CBT API)
+* App\Http\Resources\Api\V1\ClassResource
+* App\Http\Resources\Api\V1\SubjectResource
+
+--------------------------------------------------------------------------------
+15. REQUIRED API ENDPOINTS
+--------------------------------------------------------------------------------
+All new API endpoints will be versioned under /api/v1/cbt/ for the Pure PHP + React CBT system:
+
+* POST /api/v1/cbt/auth/token — Authenticate CBT system and return scoped Sanctum token.
+* GET  /api/v1/cbt/classes — List active classes & sections for current academic year.
+* GET  /api/v1/cbt/subjects — List subjects assigned per class.
+* GET  /api/v1/cbt/students — List enrolled students filtered by class_id and year_id.
+* GET  /api/v1/cbt/enrollments — Fetch complete student-class-subject relationship mapping.
+* POST /api/v1/cbt/results — Push completed CBT exam scores back into SMS student_marks / student_assessments.
+
+--------------------------------------------------------------------------------
+16. REQUIRED ADMIN UI
+--------------------------------------------------------------------------------
+* Google Classroom Integration Module (resources/views/backend/google_classroom/):
+  - OAuth Credentials & Connection Page: Connect/disconnect Google Workspace admin or teacher accounts.
+  - Course Mapping Interface: Select Google Classroom Course -> Map to SMS StudentClass + SchoolSubject + StudentYear.
+  - Student Roster Sync & Matching Tool: Visual interface showing matched Google emails vs SMS id_no/emails, with manual resolution for unlinked students.
+* CBT Management Dashboard (resources/views/backend/cbt_integration/):
+  - API Key / Secret Token Generator for CBT system.
+  - Integration log viewer & exam results import status.
+
+--------------------------------------------------------------------------------
+17. GOOGLE OAUTH REQUIREMENTS
+--------------------------------------------------------------------------------
+* Composer Package: google/apiclient: ^2.15 (PHP Google Client API Library).
+* Required Google API Scopes:
+  - https://www.googleapis.com/auth/classroom.courses.readonly
+  - https://www.googleapis.com/auth/classroom.rosters.readonly
+  - https://www.googleapis.com/auth/classroom.profile.emails
+  - https://www.googleapis.com/auth/classroom.profile.photos
+* Configuration: Added to config/services.php for google.client_id, google.client_secret, and google.redirect_uri.
+
+--------------------------------------------------------------------------------
+18. CBT INTEGRATION STRATEGY
+--------------------------------------------------------------------------------
+Laravel SMS DB
+     │
+     ▼
+Secure Laravel API (/api/v1/cbt/*)  <──[ Sanctum Token Auth ]──>  Pure PHP + React CBT
+ (Outputs JSON Resources)                                         (Stores zero SMS passwords)
+
+1. Zero Database Coupling: The Pure PHP + React CBT will communicate exclusively over HTTPS REST API endpoints provided by the Laravel SMS. It will never access the SMS MySQL database directly.
+2. Server-to-Server Auth: CBT authenticates using Sanctum tokens with restricted abilities (e.g., cbt:read-rosters, cbt:write-results).
+3. Data Payload Standardization: All student, class, and subject records returned to CBT will follow strict API Resource schemas.
+
+--------------------------------------------------------------------------------
+19. SECURITY CONSIDERATIONS
+--------------------------------------------------------------------------------
+* Token Isolation: Google OAuth access/refresh tokens will be encrypted in the SMS database using Illuminate\Support\Facades\Crypt and never exposed to the CBT system or frontend client.
+* CBT Data Scoping: CBT will only receive student IDs (users.id, users.id_no), names, class assignments, and exam configurations required to run assessments.
+* Rate Limiting & IP Whitelisting: Dedicated API rate limiters (throttle:cbt_api) to prevent denial-of-service or unauthorized enumeration.
+* Audit Logging: Every exam result pushed by the CBT system will record the source IP, timestamp, and API client ID.
+
+--------------------------------------------------------------------------------
+20. IMPLEMENTATION PHASES
+--------------------------------------------------------------------------------
+* Phase 1: Audit & Architectural Planning (Current Task - Complete)
+* Phase 2: Database Schema & API Resource Setup (Add Google fields, create mapping tables, API resources)
+* Phase 3: Secure CBT REST API Development (Build /api/v1/cbt/* endpoints with Sanctum auth)
+* Phase 4: Google OAuth & Service Layer Integration (Install google/apiclient, create service classes)
+* Phase 5: Google Classroom Course & Student Sync (Implement mapping logic and background queue sync)
+* Phase 6: Admin Dashboard UI (Build Blade interfaces for OAuth connection, course mapping, and roster review)
+* Phase 7: End-to-End Testing & Verification (Execute unit/feature tests for API and OAuth flows)
+
+--------------------------------------------------------------------------------
+21. POTENTIAL RISKS
+--------------------------------------------------------------------------------
+* Email Mismatching: Students having a personal Gmail on Google Classroom that differs from their official email in the SMS. (Mitigation: Roster Matcher UI with manual override).
+* API Rate Limits: Exceeding Google Classroom API quota during bulk sync operations. (Mitigation: Dispatch sync tasks using background queued jobs Illuminate\Contracts\Queue\ShouldQueue).
+* Token Invalidation: Expiration or revocation of Google OAuth refresh tokens. (Mitigation: Automatic token refresh check in GoogleClassroomAuthService).
+
+--------------------------------------------------------------------------------
+22. FILES THAT WOULD EVENTUALLY NEED MODIFICATION
+--------------------------------------------------------------------------------
+1. composer.json — Add google/apiclient.
+2. config/services.php — Add Google OAuth keys config.
+3. routes/api.php — Register /api/v1/cbt/* routes.
+4. routes/web.php — Register Google Classroom admin Blade routes.
+5. app/Models/User.php — Add google_id, google_email, and mapping relationships.
+6. app/Models/StudentClass.php — Add Google Course relationship.
+7. app/Models/SchoolSubject.php — Add Google Course relationship.
+8. resources/views/backend/layouts/sidebar.blade.php — Add menu items for Google Classroom & CBT Integration.
+================================================================================

@@ -18,8 +18,10 @@ class ExamTypeSeeder extends Seeder
             ['name' => 'Project', 'description' => 'Project-based assessment', 'active' => true],
         ];
 
-        foreach ($items as $item) {
-            ExamType::query()->updateOrCreate(['name' => $item['name']], $item);
+        if (\Illuminate\Support\Facades\Schema::hasTable('exam_types') && class_exists('App\Models\ExamType')) {
+            foreach ($items as $item) {
+                ExamType::query()->updateOrCreate(['name' => $item['name']], $item);
+            }
         }
     }
 }
