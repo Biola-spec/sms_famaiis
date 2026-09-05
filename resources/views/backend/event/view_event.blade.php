@@ -12,7 +12,8 @@
             $key = $dt->format('Y-m');
             $monthsList[] = [
                 'key' => $key,
-                'label' => $dt->format('F Y'),
+                'label' => $dt->format('M Y'),
+                'full_label' => $dt->format('F Y'),
                 'is_current' => $key === $currentMonthKey,
                 'year' => (int) $dt->format('Y'),
                 'month' => (int) $dt->format('m'),
@@ -43,34 +44,33 @@
 <div class="content-wrapper">
     <div class="container-full">
         <!-- Compact Header -->
-        <div class="content-header py-12 px-20">
+        <div class="content-header py-10 px-20">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-                <div>
-                    <h4 class="page-title mb-0 font-size-16 font-weight-700">
-                        <i class="fa fa-calendar text-primary mr-5"></i> School Calendar
-                    </h4>
-                </div>
+                <h5 class="page-title mb-0 font-size-15 font-weight-700 text-dark">
+                    <i class="fa fa-calendar text-primary mr-5"></i> School Calendar
+                </h5>
+
                 <div class="d-flex align-items-center flex-wrap gap-2">
-                    <div class="d-flex align-items-center bg-white px-8 py-3 rounded border shadow-sm">
-                        <label for="calendar-month-select" class="mb-0 mr-5 font-weight-600 text-dark font-size-11">
-                            Month:
-                        </label>
-                        <select id="calendar-month-select" class="form-control form-control-sm border-0 font-weight-700 font-size-11 py-0" style="width: auto; min-width: 140px; height: 24px;">
+                    <!-- Compact Month Selector Pill -->
+                    <div class="month-select-pill">
+                        <span class="month-select-label"><i class="fa fa-filter text-primary"></i> Month:</span>
+                        <select id="calendar-month-select" class="month-select-input">
                             @foreach($monthsList as $m)
                                 <option value="{{ $m['key'] }}" {{ $m['key'] === $currentMonthKey ? 'selected' : '' }}>
-                                    {{ $m['label'] }} {{ $m['is_current'] ? '(Current)' : '' }}
+                                    {{ $m['label'] }}{{ $m['is_current'] ? ' • Current' : '' }}
                                 </option>
                             @endforeach
                         </select>
                     </div>
 
-                    <div class="btn-group btn-group-sm" role="group">
-                        <button type="button" id="btn-toggle-calendar" class="btn btn-primary active font-size-11"><i class="fa fa-calendar mr-3"></i> Grid View</button>
-                        <button type="button" id="btn-toggle-table" class="btn btn-outline-secondary font-size-11"><i class="fa fa-list mr-3"></i> Table View</button>
+                    <!-- View Switcher -->
+                    <div class="btn-group" role="group">
+                        <button type="button" id="btn-toggle-calendar" class="btn btn-xs btn-primary active font-size-10 font-weight-600 px-8 py-3"><i class="fa fa-calendar mr-3"></i> Grid View</button>
+                        <button type="button" id="btn-toggle-table" class="btn btn-xs btn-outline-secondary font-size-10 font-weight-600 px-8 py-3"><i class="fa fa-list mr-3"></i> Table View</button>
                     </div>
 
                     @if($isAdmin)
-                        <a href="{{ route('event.add') }}" class="btn btn-sm btn-success font-size-11 py-4 px-10"><i class="fa fa-plus-circle mr-3"></i> Add Event</a>
+                        <a href="{{ route('event.add') }}" class="btn btn-xs btn-success font-size-10 font-weight-600 py-3 px-8"><i class="fa fa-plus-circle mr-3"></i> Add Event</a>
                     @endif
                 </div>
             </div>
@@ -85,7 +85,7 @@
                     <div class="col-xl-5 col-lg-6 col-12">
                         <div class="box box-solid border shadow-sm mb-15">
                             <div class="box-header with-border py-8 px-12 d-flex align-items-center justify-content-between bg-light-gray">
-                                <h6 class="box-title font-size-13 font-weight-700 text-dark mb-0" id="current-selected-month-label">School Calendar</h6>
+                                <h6 class="box-title font-size-12 font-weight-700 text-dark mb-0" id="current-selected-month-label">Calendar</h6>
                                 <span class="badge badge-primary font-size-9 px-6 py-2" id="month-event-count-badge">0 events</span>
                             </div>
                             <div class="box-body p-0">
@@ -105,12 +105,12 @@
                     <div class="col-xl-7 col-lg-6 col-12">
                         <div class="box box-solid border shadow-sm mb-15">
                             <div class="box-header with-border py-8 px-12 bg-light-gray d-flex align-items-center justify-content-between">
-                                <h6 class="box-title font-size-13 font-weight-700 text-dark mb-0">
+                                <h6 class="box-title font-size-12 font-weight-700 text-dark mb-0">
                                     <i class="fa fa-list-alt text-info mr-5"></i> Events Schedule
                                 </h6>
                                 <small class="text-muted font-size-10">Click any event for details</small>
                             </div>
-                            <div class="box-body p-10" style="max-height: 440px; overflow-y: auto;" id="weekly-events-breakdown">
+                            <div class="box-body p-10" style="max-height: 420px; overflow-y: auto;" id="weekly-events-breakdown">
                                 <!-- JS populated weekly cards -->
                             </div>
                         </div>
@@ -182,7 +182,7 @@
 
 <!-- Event Detail Modal -->
 <div class="modal fade" id="eventDetailModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm" style="max-width: 400px;" role="document">
+    <div class="modal-dialog modal-dialog-centered modal-sm" style="max-width: 380px;" role="document">
         <div class="modal-content border-0 shadow-lg rounded">
             <div class="modal-header bg-dark text-white py-8 px-12">
                 <h6 class="modal-title font-size-12 font-weight-700 text-white" id="modalEventTitle">Event Details</h6>
@@ -223,6 +223,38 @@
 
 <style>
     .bg-light-gray { background-color: #f8fafc; }
+
+    .month-select-pill {
+        display: inline-flex;
+        align-items: center;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        padding: 2px 6px;
+        gap: 4px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    .month-select-label {
+        font-size: 10px;
+        font-weight: 700;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        white-space: nowrap;
+    }
+
+    .month-select-input {
+        border: 0;
+        background: transparent;
+        font-size: 11px;
+        font-weight: 700;
+        color: #0f172a;
+        outline: none;
+        cursor: pointer;
+        padding: 0 2px;
+        height: 22px;
+    }
 
     .full-school-calendar {
         border: 0;
@@ -416,6 +448,19 @@
         background-color: #0f172a !important;
     }
 
+    body.dark-skin .month-select-pill {
+        background: #1e293b;
+        border-color: #334155;
+    }
+
+    body.dark-skin .month-select-label {
+        color: #94a3b8;
+    }
+
+    body.dark-skin .month-select-input {
+        color: #f1f5f9;
+    }
+
     body.dark-skin .full-school-calendar {
         background: #1e293b;
     }
@@ -512,7 +557,7 @@
 
         const selectedObj = monthsList.find(m => m.key === yearMonth);
         if (selectedObj && monthLabelEl) {
-            monthLabelEl.textContent = 'Calendar — ' + selectedObj.label;
+            monthLabelEl.textContent = 'Calendar — ' + (selectedObj.full_label || selectedObj.label);
         }
 
         const [year, month] = yearMonth.split('-').map(Number);

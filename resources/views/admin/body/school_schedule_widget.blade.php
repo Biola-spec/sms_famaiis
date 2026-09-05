@@ -9,7 +9,8 @@
             $key = $dt->format('Y-m');
             $monthsList[] = [
                 'key' => $key,
-                'label' => $dt->format('F Y'),
+                'label' => $dt->format('M Y'),
+                'full_label' => $dt->format('F Y'),
                 'is_current' => $key === $currentMonthKey,
                 'year' => (int) $dt->format('Y'),
                 'month' => (int) $dt->format('m'),
@@ -38,50 +39,53 @@
 
 <div class="col-12">
     <div class="box school-schedule-widget">
-        <div class="box-header with-border d-flex align-items-center justify-content-between flex-wrap">
+        <div class="box-header with-border d-flex align-items-center justify-content-between flex-wrap py-10">
             <div>
-                <h4 class="box-title mb-0">School Calendar & Timetable</h4>
-                <small class="subtitle">Events and subject periods published by the Admin</small>
+                <h4 class="box-title mb-0 font-size-15 font-weight-700">School Calendar & Timetable</h4>
+                <small class="subtitle font-size-11">Events and subject periods published by the Admin</small>
             </div>
             @if(Auth::user()->hasRole('Admin'))
                 <div class="d-flex gap-2">
-                    <a href="{{ route('event.view') }}" class="btn btn-sm btn-info-light"><i class="fa fa-calendar"></i> Manage Calendar</a>
-                    <a href="{{ route('timetable.index') }}" class="btn btn-sm btn-primary"><i class="fa fa-clock-o"></i> Manage Timetable</a>
+                    <a href="{{ route('event.view') }}" class="btn btn-xs btn-info-light font-size-10 px-6 py-2"><i class="fa fa-calendar"></i> Manage Calendar</a>
+                    <a href="{{ route('timetable.index') }}" class="btn btn-xs btn-primary font-size-10 px-6 py-2"><i class="fa fa-clock-o"></i> Manage Timetable</a>
                 </div>
             @endif
         </div>
         <div class="box-body">
             <div class="row">
                 <div class="col-xl-4 col-12 mb-20 mb-xl-0">
-                    <div class="d-flex align-items-center justify-content-between mb-10 flex-wrap gap-2">
-                        <h5 class="schedule-calendar-title mb-0">School Calendar</h5>
-                        <select class="form-control form-control-sm schedule-month-select" id="schedule-widget-month-select" style="width: auto; max-width: 170px; display: inline-block;">
-                            @foreach($monthsList as $m)
-                                <option value="{{ $m['key'] }}" {{ $m['key'] === $currentMonthKey ? 'selected' : '' }}>
-                                    {{ $m['label'] }} {{ $m['is_current'] ? '(Current)' : '' }}
-                                </option>
-                            @endforeach
-                        </select>
+                    <div class="d-flex align-items-center justify-content-between mb-8 flex-wrap gap-2">
+                        <h6 class="schedule-calendar-title mb-0 font-size-13 font-weight-700">School Calendar</h6>
+                        
+                        <div class="month-select-pill">
+                            <select class="month-select-input" id="schedule-widget-month-select">
+                                @foreach($monthsList as $m)
+                                    <option value="{{ $m['key'] }}" {{ $m['key'] === $currentMonthKey ? 'selected' : '' }}>
+                                        {{ $m['label'] }}{{ $m['is_current'] ? ' • Current' : '' }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
 
                     <div class="event-calendar-grid" id="schedule-widget-grid">
                         <!-- JS populated -->
                     </div>
 
-                    <div class="schedule-event-list mt-15" id="schedule-widget-event-list">
+                    <div class="schedule-event-list mt-10" id="schedule-widget-event-list">
                         <!-- JS populated events for selected month -->
                     </div>
                 </div>
 
                 <div class="col-xl-8 col-12">
                     @if($isTeacher)
-                        <div class="teacher-schedule-panel">
-                            <div class="teacher-schedule-heading">
-                                <div><span class="modal-eyebrow">MY TEACHING SCHEDULE</span><h5>Classes I Am Taking</h5></div>
-                                <span class="teacher-period-count">{{ $teacherTimetable->count() }} periods</span>
+                        <div class="teacher-schedule-panel mb-15 p-10">
+                            <div class="teacher-schedule-heading mb-5">
+                                <div><span class="modal-eyebrow">MY TEACHING SCHEDULE</span><h6 class="mb-0 font-size-12 font-weight-700">Classes I Am Taking</h6></div>
+                                <span class="teacher-period-count font-size-10 font-weight-700">{{ $teacherTimetable->count() }} periods</span>
                             </div>
                             <div class="table-responsive schedule-table-wrap">
-                                <table class="table table-bordered table-sm mb-0 schedule-modal-table">
+                                <table class="table table-bordered table-sm mb-0 schedule-modal-table font-size-11">
                                     <thead>
                                         <tr>
                                             <th>Day</th>
@@ -109,15 +113,15 @@
                         </div>
                     @endif
 
-                    <h5 class="all-sections-heading">View Section Timetables</h5>
+                    <h6 class="all-sections-heading font-size-12 font-weight-700 mb-8">View Section Timetables</h6>
                     @forelse($timetableGroups as $sectionName => $sectionEntries)
-                        <button type="button" class="section-timetable-button" data-timetable-modal="timetable-modal-{{ $loop->index }}">
+                        <button type="button" class="section-timetable-button py-8 px-10 mb-6" data-timetable-modal="timetable-modal-{{ $loop->index }}">
                             <span class="section-timetable-icon"><i class="fa fa-calendar"></i></span>
                             <span><strong>{{ $sectionName }}</strong><small>{{ $sectionEntries->count() }} subject period(s)</small></span>
                             <i class="fa fa-chevron-right section-timetable-arrow"></i>
                         </button>
                     @empty
-                        <div class="text-center text-muted p-20">The Admin has not published a timetable yet.</div>
+                        <div class="text-center text-muted p-15 font-size-11">The Admin has not published a timetable yet.</div>
                     @endforelse
                 </div>
             </div>
@@ -135,7 +139,7 @@
             </div>
             <div class="school-timetable-modal-body">
                 <div class="table-responsive">
-                    <table class="table table-bordered table-sm mb-0 schedule-modal-table">
+                    <table class="table table-bordered table-sm mb-0 schedule-modal-table font-size-11">
                         <thead><tr><th>Day</th><th>Time</th><th>Class</th><th>Subject</th><th>Teacher</th><th>Room</th></tr></thead>
                         <tbody>
                             @foreach($sectionEntries as $entry)
@@ -157,38 +161,59 @@
 @endforeach
 
 <style>
+    .month-select-pill {
+        display: inline-flex;
+        align-items: center;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        padding: 1px 4px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    .month-select-input {
+        border: 0;
+        background: transparent;
+        font-size: 11px;
+        font-weight: 700;
+        color: #0f172a;
+        outline: none;
+        cursor: pointer;
+        height: 20px;
+        padding: 0;
+    }
+
     .school-schedule-widget .event-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }
-    .school-schedule-widget .event-calendar-weekday { color:#64748b; font-size:10px; font-weight:700; text-align:center; padding:4px 0; text-transform:uppercase; }
-    .school-schedule-widget .event-calendar-day { min-height:30px; border:1px solid #e5e7eb; border-radius:4px; padding:4px; font-size:11px; text-align:center; position:relative; background:#f8fafc; color:#334155; }
+    .school-schedule-widget .event-calendar-weekday { color:#64748b; font-size:10px; font-weight:700; text-align:center; padding:3px 0; text-transform:uppercase; }
+    .school-schedule-widget .event-calendar-day { min-height:28px; border:1px solid #e5e7eb; border-radius:4px; padding:3px; font-size:10px; text-align:center; position:relative; background:#f8fafc; color:#334155; }
     .school-schedule-widget .event-calendar-day.is-empty { border-color:transparent; background:transparent; }
     .school-schedule-widget .event-calendar-day.has-event { background:#1e40af; color:#ffffff; font-weight:700; cursor:pointer; }
-    .school-schedule-widget .event-calendar-day.has-event::after { content:""; position:absolute; bottom:3px; left:50%; transform:translateX(-50%); width:12px; height:3px; background:#60a5fa; border-radius:2px; }
+    .school-schedule-widget .event-calendar-day.has-event::after { content:""; position:absolute; bottom:2px; left:50%; transform:translateX(-50%); width:10px; height:2px; background:#60a5fa; border-radius:2px; }
     .school-schedule-widget .event-calendar-day.is-today { border:2px solid #2563eb; font-weight:800; }
-    .schedule-calendar-title { font-size:15px; font-weight:700; color:#1e293b; }
-    .schedule-month-select { font-weight:600; border-radius:6px; border:1px solid #cbd5e1; font-size:12px; height:30px; padding:2px 8px; }
-    .section-timetable-button { width:100%; display:flex; align-items:center; gap:10px; border:1px solid #dbe5f0; border-radius:7px; background:#fff; padding:12px 14px; margin-bottom:9px; text-align:left; color:#1e2e4a; transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease; cursor:pointer; }
-    .section-timetable-button:hover { transform:translateY(-1px); border-color:#2e86de; box-shadow:0 5px 14px rgba(46,134,222,.14); }
+    .schedule-calendar-title { font-size:13px; font-weight:700; color:#1e293b; }
+    .section-timetable-button { width:100%; display:flex; align-items:center; gap:8px; border:1px solid #dbe5f0; border-radius:6px; background:#fff; padding:8px 10px; margin-bottom:6px; text-align:left; color:#1e2e4a; transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease; cursor:pointer; }
+    .section-timetable-button:hover { transform:translateY(-1px); border-color:#2e86de; box-shadow:0 4px 10px rgba(46,134,222,.12); }
     .section-timetable-button strong, .section-timetable-button small { display:block; }
-    .section-timetable-button strong { font-size:12px; }
-    .section-timetable-button small { color:#64748b; font-size:10px; margin-top:2px; }
-    .section-timetable-icon { width:30px; height:30px; display:grid; place-items:center; border-radius:6px; color:#2563eb; background:#e8f2fc; font-size:13px; }
-    .section-timetable-arrow { margin-left:auto; color:#94a3b8; font-size:11px; }
+    .section-timetable-button strong { font-size:11px; }
+    .section-timetable-button small { color:#64748b; font-size:9px; margin-top:1px; }
+    .section-timetable-icon { width:26px; height:26px; display:grid; place-items:center; border-radius:4px; color:#2563eb; background:#e8f2fc; font-size:11px; }
+    .section-timetable-arrow { margin-left:auto; color:#94a3b8; font-size:10px; }
     .school-timetable-modal { display:none; position:fixed; inset:0; z-index:2000; align-items:center; justify-content:center; padding:20px; }
     .school-timetable-modal.is-open { display:flex; }
     .school-timetable-modal-backdrop { position:absolute; inset:0; background:rgba(8,15,30,.72); backdrop-filter:blur(3px); }
-    .school-timetable-dialog { position:relative; z-index:1; width:min(940px, 100%); max-height:min(680px, 90vh); overflow:hidden; border-radius:10px; background:#fff; box-shadow:0 20px 60px rgba(0,0,0,.28); }
-    .school-timetable-modal-header { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; background:#132a46; color:#fff; }
-    .school-timetable-modal-header h4 { margin:3px 0 0; color:#fff; font-size:18px; }
+    .school-timetable-dialog { position:relative; z-index:1; width:min(900px, 100%); max-height:min(640px, 90vh); overflow:hidden; border-radius:8px; background:#fff; box-shadow:0 20px 60px rgba(0,0,0,.28); }
+    .school-timetable-modal-header { display:flex; align-items:center; justify-content:space-between; padding:14px 18px; background:#132a46; color:#fff; }
+    .school-timetable-modal-header h4 { margin:2px 0 0; color:#fff; font-size:16px; }
     .modal-eyebrow { font-size:9px; letter-spacing:1.2px; color:#9bc7f4; }
-    .school-timetable-close { border:0; width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,.12); color:#fff; cursor:pointer; }
+    .school-timetable-close { border:0; width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,.12); color:#fff; cursor:pointer; }
     .school-timetable-close:hover { background:#e66767; }
-    .school-timetable-modal-body { max-height:calc(min(680px, 90vh) - 86px); overflow:auto; padding:18px 22px; }
+    .school-timetable-modal-body { max-height:calc(min(640px, 90vh) - 76px); overflow:auto; padding:14px 18px; }
     .schedule-modal-table th { font-size:10px; white-space:nowrap; background:#f1f6fb; }
-    .schedule-modal-table td { font-size:11px; padding:7px 8px; vertical-align:middle; }
-    .teacher-schedule-panel { margin-bottom:18px; padding:12px; border:1px solid #dbe5f0; border-radius:7px; background:#f8fbff; }
-    .teacher-schedule-heading { display:flex; align-items:center; justify-content:space-between; margin-bottom:7px; }
-    .teacher-schedule-heading h5, .all-sections-heading { margin:3px 0 8px; font-size:12px; font-weight:700; }
-    .teacher-period-count { color:#2563eb; font-size:10px; font-weight:700; }
+    .schedule-modal-table td { font-size:10px; padding:5px 6px; vertical-align:middle; }
+    .teacher-schedule-panel { margin-bottom:12px; padding:10px; border:1px solid #dbe5f0; border-radius:6px; background:#f8fbff; }
+    .teacher-schedule-heading { display:flex; align-items:center; justify-content:space-between; margin-bottom:5px; }
+    .teacher-schedule-heading h6, .all-sections-heading { margin:2px 0 6px; font-size:11px; font-weight:700; }
+    .teacher-period-count { color:#2563eb; font-size:9px; font-weight:700; }
     .all-sections-heading { color:#334155; }
     body.dark-skin .section-timetable-button { background:#172131; border-color:#334155; color:#e5e7eb; }
     body.dark-skin .teacher-schedule-panel { background:#172131; border-color:#334155; }
@@ -196,19 +221,19 @@
     body.dark-skin .school-timetable-dialog { background:#111827; }
     body.dark-skin .schedule-modal-table th { background:#1f2937; color:#e5e7eb; }
     body.dark-skin .schedule-modal-table td { color:#d1d5db; }
-    .schedule-event-row { display:flex; gap:10px; padding:8px; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:6px; background:#ffffff; font-size:12px; align-items:center; }
-    .schedule-event-row strong { min-width:48px; color:#1e40af; font-weight:700; background:#dbeafe; padding:4px 6px; border-radius:4px; text-align:center; }
+    .schedule-event-row { display:flex; gap:8px; padding:6px; border:1px solid #e2e8f0; border-radius:5px; margin-bottom:5px; background:#ffffff; font-size:11px; align-items:center; }
+    .schedule-event-row strong { min-width:44px; color:#1e40af; font-weight:700; background:#dbeafe; padding:3px 5px; border-radius:3px; text-align:center; font-size:10px; }
     .schedule-event-row span { flex:1; color:#1e293b; font-weight:600; }
-    .schedule-event-row small { display:block; color:#64748b; font-weight:400; font-size:11px; margin-top:2px; }
+    .schedule-event-row small { display:block; color:#64748b; font-weight:400; font-size:10px; margin-top:1px; }
     body.dark-skin .schedule-event-row { background:#1e293b; border-color:#334155; }
     body.dark-skin .schedule-event-row span { color:#f1f5f9; }
     body.dark-skin .schedule-event-row strong { background:#1e3a8a; color:#93c5fd; }
-    .schedule-table-wrap { max-height:320px; overflow:auto; }
-    .schedule-table-wrap th { white-space:nowrap; font-size:10px; }
-    .schedule-table-wrap td { font-size:10px; vertical-align:middle; padding:5px 6px; }
+    .schedule-table-wrap { max-height:280px; overflow:auto; }
+    .schedule-table-wrap th { white-space:nowrap; font-size:9px; }
+    .schedule-table-wrap td { font-size:9px; vertical-align:middle; padding:4px 5px; }
     body.dark-skin .school-schedule-widget .event-calendar-day { background:#1e293b; border-color:#334155; color:#cbd5e1; }
     body.dark-skin .school-schedule-widget .event-calendar-day.has-event { background:#2563eb; color:#ffffff; }
-    .gap-2 { gap:8px; }
+    .gap-2 { gap:6px; }
     body.timetable-modal-open { overflow:hidden; }
 </style>
 
@@ -266,7 +291,7 @@
 
             // Render Events List for Selected Month
             if (monthEvents.length === 0) {
-                listEl.innerHTML = '<div class="text-muted text-center p-15 font-size-12">No events scheduled for this month.</div>';
+                listEl.innerHTML = '<div class="text-muted text-center p-10 font-size-11">No events scheduled for this month.</div>';
             } else {
                 let listHtml = '';
                 monthEvents.sort((a, b) => a.event_date.localeCompare(b.event_date));

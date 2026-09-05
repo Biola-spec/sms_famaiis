@@ -9,7 +9,8 @@
             $key = $dt->format('Y-m');
             $monthsList[] = [
                 'key' => $key,
-                'label' => $dt->format('F Y'),
+                'label' => $dt->format('M Y'),
+                'full_label' => $dt->format('F Y'),
                 'is_current' => $key === $currentMonthKey,
                 'year' => (int) $dt->format('Y'),
                 'month' => (int) $dt->format('m'),
@@ -56,20 +57,21 @@
 
 <div class="col-xl-4 col-12">
     <div class="box dashboard-event-calendar">
-        <div class="box-header with-border d-flex align-items-center justify-content-between flex-wrap gap-2">
-            <div>
-                <h4 class="box-title mb-0">{{ __('ui.calendar') }}</h4>
-            </div>
+        <div class="box-header with-border d-flex align-items-center justify-content-between flex-wrap gap-2 py-10">
+            <h5 class="box-title mb-0 font-size-14 font-weight-700">{{ __('ui.calendar') }}</h5>
+            
             <div class="d-flex align-items-center gap-2">
-                <select class="form-control form-control-sm dashboard-events-month-select" id="events-widget-month-select" style="width: auto; max-width: 150px; font-weight: 600;">
-                    @foreach($monthsList as $m)
-                        <option value="{{ $m['key'] }}" {{ $m['key'] === $currentMonthKey ? 'selected' : '' }}>
-                            {{ $m['label'] }} {{ $m['is_current'] ? '(Current)' : '' }}
-                        </option>
-                    @endforeach
-                </select>
+                <div class="month-select-pill">
+                    <select class="month-select-input" id="events-widget-month-select">
+                        @foreach($monthsList as $m)
+                            <option value="{{ $m['key'] }}" {{ $m['key'] === $currentMonthKey ? 'selected' : '' }}>
+                                {{ $m['label'] }}{{ $m['is_current'] ? ' • Current' : '' }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
                 @if(Auth::user()->role == 'Admin' || Auth::user()->hasRole('Admin'))
-                    <a href="{{ route('event.view') }}" class="btn btn-sm btn-info-light">{{ __('ui.manage') }}</a>
+                    <a href="{{ route('event.view') }}" class="btn btn-xs btn-info-light font-size-10 px-6 py-2">{{ __('ui.manage') }}</a>
                 @endif
             </div>
         </div>
@@ -83,7 +85,7 @@
                 <div class="event-calendar-popup-inner"></div>
             </div>
 
-            <div class="event-next-panel mt-20">
+            <div class="event-next-panel mt-15">
                 <small class="event-next-label">{{ __('ui.next_event') }}</small>
                 @if($nextEvent)
                     <div class="event-list-item">
@@ -99,9 +101,6 @@
                                     <span class="mx-5">|</span>{{ $nextEvent->location }}
                                 @endif
                             </small>
-                            @if($nextEvent->description)
-                                <small class="d-block mt-5">{{ \Illuminate\Support\Str::limit(strip_tags($nextEvent->description), 120) }}</small>
-                            @endif
                         </div>
                     </div>
                 @else
@@ -109,7 +108,7 @@
                 @endif
             </div>
 
-            <div class="event-list mt-15" id="events-widget-month-events-list">
+            <div class="event-list mt-10" id="events-widget-month-events-list">
                 <!-- Selected month events list -->
             </div>
         </div>
@@ -117,20 +116,42 @@
 </div>
 
 <style>
+    .month-select-pill {
+        display: inline-flex;
+        align-items: center;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        padding: 1px 4px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    .month-select-input {
+        border: 0;
+        background: transparent;
+        font-size: 11px;
+        font-weight: 700;
+        color: #0f172a;
+        outline: none;
+        cursor: pointer;
+        height: 20px;
+        padding: 0;
+    }
+
     .dashboard-event-calendar .box-body {
-        padding-top: 14px;
+        padding-top: 10px;
         position: relative;
     }
 
     .event-calendar-grid {
         display: grid;
         grid-template-columns: repeat(7, minmax(0, 1fr));
-        gap: 6px;
+        gap: 4px;
     }
 
     .event-calendar-weekday {
         color: #64748b !important;
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 700;
         text-align: center;
         text-transform: uppercase;
@@ -141,13 +162,13 @@
         aspect-ratio: 1;
         background: #f1f5f9;
         border: 1px solid #e2e8f0;
-        border-radius: 6px;
+        border-radius: 4px;
         color: #334155 !important;
         display: flex;
-        font-size: 13px;
+        font-size: 11px;
         font-weight: 700;
         justify-content: center;
-        min-height: 34px;
+        min-height: 28px;
         position: relative;
     }
 
@@ -167,27 +188,26 @@
         background: linear-gradient(135deg, #0b1f3a, #164e78);
         border-color: #164e78;
         color: #ffffff !important;
-        box-shadow: 0 8px 16px rgba(11, 31, 58, 0.18);
         cursor: pointer;
     }
 
     .event-calendar-day.has-event::after {
         background: #38bdf8;
         border-radius: 999px;
-        bottom: 5px;
+        bottom: 3px;
         content: "";
-        height: 4px;
+        height: 3px;
         position: absolute;
-        width: 16px;
+        width: 12px;
     }
 
     .event-calendar-popup {
         background: #ffffff;
         border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
-        max-width: 260px;
-        padding: 10px 12px;
+        border-radius: 6px;
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.15);
+        max-width: 240px;
+        padding: 8px 10px;
         pointer-events: none;
         position: absolute;
         z-index: 20;
@@ -195,20 +215,20 @@
 
     .event-calendar-popup-item + .event-calendar-popup-item {
         border-top: 1px solid #e2e8f0;
-        margin-top: 8px;
-        padding-top: 8px;
+        margin-top: 6px;
+        padding-top: 6px;
     }
 
     .event-calendar-popup-item strong {
         color: #0b1f3a;
         display: block;
-        font-size: 13px;
+        font-size: 12px;
     }
 
     .event-calendar-popup-item small,
     .event-calendar-popup-item p {
         color: #64748b;
-        font-size: 12px;
+        font-size: 11px;
         margin: 2px 0 0;
     }
 
@@ -217,104 +237,54 @@
         display: block;
         font-weight: 700;
         letter-spacing: .04em;
-        margin-bottom: 8px;
+        margin-bottom: 6px;
+        font-size: 10px;
         text-transform: uppercase;
     }
 
     .event-list {
         display: grid;
-        gap: 10px;
+        gap: 6px;
     }
 
     .event-list-item {
         align-items: center;
         background: #f8fafc;
         border: 1px solid #e2e8f0;
-        border-radius: 6px;
+        border-radius: 5px;
         display: flex;
-        gap: 12px;
-        padding: 10px;
+        gap: 8px;
+        padding: 6px 8px;
     }
 
     .event-date-pill {
         align-items: center;
         background: #e0f2fe;
-        border-radius: 6px;
+        border-radius: 4px;
         color: #0b1f3a !important;
         display: flex;
         flex-direction: column;
-        flex: 0 0 46px;
+        flex: 0 0 38px;
         justify-content: center;
-        min-height: 46px;
+        min-height: 38px;
     }
 
-    .event-date-pill strong,
-    .event-date-pill span,
-    .event-list-copy p,
-    .event-list-copy small,
-    .event-empty-state {
-        color: inherit !important;
-    }
+    .event-date-pill strong { font-size: 12px; }
+    .event-date-pill span { font-size: 9px; font-weight: 700; text-transform: uppercase; }
 
-    .event-date-pill span {
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-    }
-
-    .event-list-copy {
-        color: #334155 !important;
-        min-width: 0;
-    }
-
-    .event-list-copy p {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .event-list-copy small,
-    .event-empty-state {
-        color: #64748b !important;
-    }
+    .event-list-copy { color: #334155 !important; min-width: 0; }
+    .event-list-copy p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+    .event-list-copy small { color: #64748b !important; font-size: 10px; }
 
     .event-empty-state {
         background: #f8fafc;
         border: 1px dashed #cbd5e1;
-        border-radius: 6px;
+        border-radius: 5px;
         font-weight: 600;
-        padding: 14px;
+        font-size: 11px;
+        padding: 10px;
         text-align: center;
-    }
-
-    body.dark-skin .event-calendar-weekday,
-    body.dark-skin .event-list-copy small,
-    body.dark-skin .event-empty-state,
-    body.dark-skin .event-next-label {
-        color: #8a99b5 !important;
-    }
-
-    body.dark-skin .event-calendar-day {
-        background: #272e48;
-        border-color: rgba(255, 255, 255, 0.12);
-        color: #e1e6f2 !important;
-    }
-
-    body.dark-skin .event-calendar-day.is-empty {
-        background: transparent;
-        border-color: transparent;
-    }
-
-    body.dark-skin .event-list-item,
-    body.dark-skin .event-empty-state,
-    body.dark-skin .event-calendar-popup {
-        background: #272e48;
-        border-color: rgba(255, 255, 255, 0.12);
-    }
-
-    body.dark-skin .event-list-copy,
-    body.dark-skin .event-calendar-popup-item strong {
-        color: #e1e6f2 !important;
+        color: #64748b;
     }
 </style>
 
@@ -356,9 +326,9 @@
         renderEvents(events);
         popup.hidden = false;
         var box = grid.parentElement.getBoundingClientRect();
-        var left = clientX - box.left + 12;
-        var top = clientY - box.top + 12;
-        if (left + 260 > box.width) left = Math.max(0, box.width - 270);
+        var left = clientX - box.left + 10;
+        var top = clientY - box.top + 10;
+        if (left + 240 > box.width) left = Math.max(0, box.width - 250);
         popup.style.left = left + 'px';
         popup.style.top = top + 'px';
         activeCell = cell;

@@ -43,15 +43,16 @@ class SchoolScheduleService
             $key = $dt->format('Y-m');
             $monthsMap->put($key, [
                 'key' => $key,
-                'label' => $dt->format('F Y'),
+                'label' => $dt->format('M Y'),
+                'full_label' => $dt->format('F Y'),
                 'is_current' => $key === $currentMonthKey,
                 'year' => (int) $dt->format('Y'),
                 'month' => (int) $dt->format('m'),
             ]);
         }
 
-        $eventMonths = Event::selectRaw("DATE_FORMAT(event_date, '%Y-%m') as month_key, DATE_FORMAT(event_date, '%M %Y') as month_label, YEAR(event_date) as year_num, MONTH(event_date) as month_num")
-            ->groupBy('month_key', 'month_label', 'year_num', 'month_num')
+        $eventMonths = Event::selectRaw("DATE_FORMAT(event_date, '%Y-%m') as month_key, DATE_FORMAT(event_date, '%b %Y') as month_label, DATE_FORMAT(event_date, '%M %Y') as full_label, YEAR(event_date) as year_num, MONTH(event_date) as month_num")
+            ->groupBy('month_key', 'month_label', 'full_label', 'year_num', 'month_num')
             ->orderBy('month_key')
             ->get();
 
@@ -59,7 +60,8 @@ class SchoolScheduleService
             if ($em->month_key && !$monthsMap->has($em->month_key)) {
                 $monthsMap->put($em->month_key, [
                     'key' => $em->month_key,
-                    'label' => $em->month_label,
+                    'label' => $em->month_label ?: $em->full_label,
+                    'full_label' => $em->full_label,
                     'is_current' => $em->month_key === $currentMonthKey,
                     'year' => (int) $em->year_num,
                     'month' => (int) $em->month_num,
