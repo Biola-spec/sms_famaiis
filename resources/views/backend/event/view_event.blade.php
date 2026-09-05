@@ -43,20 +43,19 @@
 <div class="content-wrapper">
     <div class="container-full">
         <!-- Compact Header -->
-        <div class="content-header py-15 px-20">
+        <div class="content-header py-12 px-20">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <div>
-                    <h4 class="page-title mb-0 font-size-18 font-weight-700">
+                    <h4 class="page-title mb-0 font-size-16 font-weight-700">
                         <i class="fa fa-calendar text-primary mr-5"></i> School Calendar
                     </h4>
-                    <span class="text-muted font-size-12">Academic schedule, events & section breakdown</span>
                 </div>
                 <div class="d-flex align-items-center flex-wrap gap-2">
-                    <div class="d-flex align-items-center bg-white px-10 py-5 rounded border shadow-sm">
-                        <label for="calendar-month-select" class="mb-0 mr-8 font-weight-600 text-dark font-size-11">
-                            <i class="fa fa-filter text-primary"></i> Month:
+                    <div class="d-flex align-items-center bg-white px-8 py-3 rounded border shadow-sm">
+                        <label for="calendar-month-select" class="mb-0 mr-5 font-weight-600 text-dark font-size-11">
+                            Month:
                         </label>
-                        <select id="calendar-month-select" class="form-control form-control-sm border-0 font-weight-700 font-size-12 py-0" style="width: auto; min-width: 150px; height: 26px;">
+                        <select id="calendar-month-select" class="form-control form-control-sm border-0 font-weight-700 font-size-11 py-0" style="width: auto; min-width: 140px; height: 24px;">
                             @foreach($monthsList as $m)
                                 <option value="{{ $m['key'] }}" {{ $m['key'] === $currentMonthKey ? 'selected' : '' }}>
                                     {{ $m['label'] }} {{ $m['is_current'] ? '(Current)' : '' }}
@@ -66,12 +65,12 @@
                     </div>
 
                     <div class="btn-group btn-group-sm" role="group">
-                        <button type="button" id="btn-toggle-calendar" class="btn btn-primary active font-size-11 font-weight-600"><i class="fa fa-calendar mr-5"></i> Grid View</button>
-                        <button type="button" id="btn-toggle-table" class="btn btn-outline-secondary font-size-11 font-weight-600"><i class="fa fa-list mr-5"></i> Table View</button>
+                        <button type="button" id="btn-toggle-calendar" class="btn btn-primary active font-size-11"><i class="fa fa-calendar mr-3"></i> Grid View</button>
+                        <button type="button" id="btn-toggle-table" class="btn btn-outline-secondary font-size-11"><i class="fa fa-list mr-3"></i> Table View</button>
                     </div>
 
                     @if($isAdmin)
-                        <a href="{{ route('event.add') }}" class="btn btn-sm btn-success font-size-11 font-weight-600"><i class="fa fa-plus-circle mr-5"></i> Add Event</a>
+                        <a href="{{ route('event.add') }}" class="btn btn-sm btn-success font-size-11 py-4 px-10"><i class="fa fa-plus-circle mr-3"></i> Add Event</a>
                     @endif
                 </div>
             </div>
@@ -82,12 +81,12 @@
             <!-- CALENDAR GRID VIEW SECTION -->
             <div id="calendar-grid-view-section">
                 <div class="row">
-                    <!-- Main Calendar Grid Column -->
-                    <div class="col-xl-8 col-lg-7 col-12">
+                    <!-- Compact Calendar Grid Column (Max half the page width) -->
+                    <div class="col-xl-5 col-lg-6 col-12">
                         <div class="box box-solid border shadow-sm mb-15">
-                            <div class="box-header with-border py-10 px-15 d-flex align-items-center justify-content-between bg-light-gray">
-                                <h5 class="box-title font-size-14 font-weight-700 text-dark mb-0" id="current-selected-month-label">School Calendar</h5>
-                                <span class="badge badge-primary font-size-10 px-8 py-4 font-weight-600" id="month-event-count-badge">0 events</span>
+                            <div class="box-header with-border py-8 px-12 d-flex align-items-center justify-content-between bg-light-gray">
+                                <h6 class="box-title font-size-13 font-weight-700 text-dark mb-0" id="current-selected-month-label">School Calendar</h6>
+                                <span class="badge badge-primary font-size-9 px-6 py-2" id="month-event-count-badge">0 events</span>
                             </div>
                             <div class="box-body p-0">
                                 <div class="full-school-calendar">
@@ -102,15 +101,16 @@
                         </div>
                     </div>
 
-                    <!-- Side Panel: Weekly Events Breakdown -->
-                    <div class="col-xl-4 col-lg-5 col-12">
+                    <!-- Events Schedule List Column (Fills remaining half) -->
+                    <div class="col-xl-7 col-lg-6 col-12">
                         <div class="box box-solid border shadow-sm mb-15">
-                            <div class="box-header with-border py-10 px-15 bg-light-gray">
-                                <h5 class="box-title font-size-13 font-weight-700 text-dark mb-0">
+                            <div class="box-header with-border py-8 px-12 bg-light-gray d-flex align-items-center justify-content-between">
+                                <h6 class="box-title font-size-13 font-weight-700 text-dark mb-0">
                                     <i class="fa fa-list-alt text-info mr-5"></i> Events Schedule
-                                </h5>
+                                </h6>
+                                <small class="text-muted font-size-10">Click any event for details</small>
                             </div>
-                            <div class="box-body p-12" style="max-height: 660px; overflow-y: auto;" id="weekly-events-breakdown">
+                            <div class="box-body p-10" style="max-height: 440px; overflow-y: auto;" id="weekly-events-breakdown">
                                 <!-- JS populated weekly cards -->
                             </div>
                         </div>
@@ -121,48 +121,48 @@
             <!-- TABLE VIEW SECTION -->
             <div id="calendar-table-view-section" style="display: none;">
                 <div class="box box-solid border shadow-sm">
-                    <div class="box-header with-border py-10 px-15 d-flex justify-content-between align-items-center">
-                        <h5 class="box-title font-size-14 font-weight-700">All Events List</h5>
+                    <div class="box-header with-border py-8 px-15 d-flex justify-content-between align-items-center">
+                        <h6 class="box-title font-size-13 font-weight-700">All Events List</h6>
                         @if($isAdmin)
-                            <a href="{{ route('event.add') }}" class="btn btn-sm btn-success font-size-11"><i class="fa fa-plus"></i> Add Event</a>
+                            <a href="{{ route('event.add') }}" class="btn btn-xs btn-success"><i class="fa fa-plus"></i> Add Event</a>
                         @endif
                     </div>
-                    <div class="box-body p-15">
+                    <div class="box-body p-12">
                         <div class="table-responsive">
-                            <table id="example1" class="table table-bordered table-hover font-size-12 mb-0">
+                            <table id="example1" class="table table-bordered table-hover font-size-11 mb-0">
                                 <thead class="thead-light">
                                     <tr>
-                                        <th width="5%" class="py-8 font-size-11">SL</th>
-                                        <th class="py-8 font-size-11">Title</th>
-                                        <th class="py-8 font-size-11">Date & Time</th>
-                                        <th class="py-8 font-size-11">Location</th>
-                                        <th class="py-8 font-size-11">Section</th>
-                                        <th class="py-8 font-size-11">Notified</th>
+                                        <th width="5%" class="py-6 font-size-10">SL</th>
+                                        <th class="py-6 font-size-10">Title</th>
+                                        <th class="py-6 font-size-10">Date & Time</th>
+                                        <th class="py-6 font-size-10">Location</th>
+                                        <th class="py-6 font-size-10">Section</th>
+                                        <th class="py-6 font-size-10">Notified</th>
                                         @if($isAdmin)
-                                            <th width="18%" class="py-8 font-size-11">Action</th>
+                                            <th width="18%" class="py-6 font-size-10">Action</th>
                                         @endif
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach($allData as $key => $event)
                                         <tr>
-                                            <td class="py-8 font-size-12">{{ $key + 1 }}</td>
-                                            <td class="py-8 font-weight-600 font-size-12">{{ $event->title }}</td>
-                                            <td class="py-8 font-size-11">
+                                            <td class="py-6 font-size-11">{{ $key + 1 }}</td>
+                                            <td class="py-6 font-weight-600 font-size-11">{{ $event->title }}</td>
+                                            <td class="py-6 font-size-10">
                                                 {{ date('d M Y', strtotime($event->event_date)) }} <br>
                                                 <small class="text-muted">{{ $event->event_time ? \Carbon\Carbon::parse($event->event_time)->format('h:i A') : 'All day' }}</small>
                                             </td>
-                                            <td class="py-8 font-size-11">{{ $event->location ?: '-' }}</td>
-                                            <td class="py-8"><span class="badge badge-info font-size-10">{{ optional($event->section)->name ?: 'All Sections' }}</span></td>
-                                            <td class="py-8">
+                                            <td class="py-6 font-size-10">{{ $event->location ?: '-' }}</td>
+                                            <td class="py-6"><span class="badge badge-info font-size-9">{{ optional($event->section)->name ?: 'All Sections' }}</span></td>
+                                            <td class="py-6">
                                                 @if($event->is_notified)
-                                                    <span class="badge badge-success font-size-10">Yes</span>
+                                                    <span class="badge badge-success font-size-9">Yes</span>
                                                 @else
-                                                    <span class="badge badge-secondary font-size-10">No</span>
+                                                    <span class="badge badge-secondary font-size-9">No</span>
                                                 @endif
                                             </td>
                                             @if($isAdmin)
-                                                <td class="py-8">
+                                                <td class="py-6">
                                                     <a href="{{ route('event.edit', $event->id) }}" class="btn btn-xs btn-info" title="Edit"><i class="fa fa-edit"></i></a>
                                                     <a href="{{ route('event.registrations.view', $event->id) }}" class="btn btn-xs btn-primary" title="View Registrations"><i class="fa fa-users"></i></a>
                                                     <a href="{{ route('event.delete', $event->id) }}" class="btn btn-xs btn-danger" id="delete" title="Delete"><i class="fa fa-trash"></i></a>
@@ -182,40 +182,40 @@
 
 <!-- Event Detail Modal -->
 <div class="modal fade" id="eventDetailModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-sm" style="max-width: 420px;" role="document">
+    <div class="modal-dialog modal-dialog-centered modal-sm" style="max-width: 400px;" role="document">
         <div class="modal-content border-0 shadow-lg rounded">
-            <div class="modal-header bg-dark text-white py-10 px-15">
-                <h5 class="modal-title font-size-13 font-weight-700 text-white" id="modalEventTitle">Event Details</h5>
-                <button type="button" class="close text-white opacity-8 font-size-16" data-dismiss="modal" aria-label="Close">
+            <div class="modal-header bg-dark text-white py-8 px-12">
+                <h6 class="modal-title font-size-12 font-weight-700 text-white" id="modalEventTitle">Event Details</h6>
+                <button type="button" class="close text-white opacity-8 font-size-14" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <div class="modal-body p-15">
-                <div class="mb-10">
-                    <span class="badge badge-info font-size-10 font-weight-600 mb-5" id="modalEventSection">All Sections</span>
-                    <h5 class="font-weight-700 text-dark mb-2 font-size-14" id="modalEventHeading">Title</h5>
+            <div class="modal-body p-12">
+                <div class="mb-8">
+                    <span class="badge badge-info font-size-9 font-weight-600 mb-4" id="modalEventSection">All Sections</span>
+                    <h6 class="font-weight-700 text-dark mb-2 font-size-13" id="modalEventHeading">Title</h6>
                 </div>
-                <div class="row bg-light py-8 px-10 rounded mb-10 mx-0 border">
-                    <div class="col-6 px-5">
-                        <small class="text-muted font-size-10 d-block"><i class="fa fa-calendar text-primary"></i> Date</small>
-                        <strong id="modalEventDate" class="font-size-11 text-dark">-</strong>
+                <div class="row bg-light py-6 px-8 rounded mb-8 mx-0 border">
+                    <div class="col-6 px-4">
+                        <small class="text-muted font-size-9 d-block"><i class="fa fa-calendar text-primary"></i> Date</small>
+                        <strong id="modalEventDate" class="font-size-10 text-dark">-</strong>
                     </div>
-                    <div class="col-6 px-5">
-                        <small class="text-muted font-size-10 d-block"><i class="fa fa-clock-o text-primary"></i> Time</small>
-                        <strong id="modalEventTime" class="font-size-11 text-dark">-</strong>
+                    <div class="col-6 px-4">
+                        <small class="text-muted font-size-9 d-block"><i class="fa fa-clock-o text-primary"></i> Time</small>
+                        <strong id="modalEventTime" class="font-size-10 text-dark">-</strong>
                     </div>
                 </div>
-                <div class="mb-10" id="modalEventLocationWrap">
-                    <small class="text-muted font-size-10 d-block"><i class="fa fa-map-marker text-danger"></i> Location</small>
-                    <span id="modalEventLocation" class="font-weight-600 font-size-11 text-dark">-</span>
+                <div class="mb-8" id="modalEventLocationWrap">
+                    <small class="text-muted font-size-9 d-block"><i class="fa fa-map-marker text-danger"></i> Location</small>
+                    <span id="modalEventLocation" class="font-weight-600 font-size-10 text-dark">-</span>
                 </div>
-                <div class="mb-5">
-                    <small class="text-muted font-size-10 d-block"><i class="fa fa-align-left text-info"></i> Description</small>
-                    <p id="modalEventDescription" class="text-secondary font-size-11 mb-0 line-height-14">-</p>
+                <div class="mb-4">
+                    <small class="text-muted font-size-9 d-block"><i class="fa fa-align-left text-info"></i> Description</small>
+                    <p id="modalEventDescription" class="text-secondary font-size-10 mb-0 line-height-14">-</p>
                 </div>
             </div>
-            <div class="modal-footer bg-light py-8 px-15" id="modalEventActions">
-                <button type="button" class="btn btn-sm btn-secondary font-size-11" data-dismiss="modal">Close</button>
+            <div class="modal-footer bg-light py-6 px-12" id="modalEventActions">
+                <button type="button" class="btn btn-xs btn-secondary font-size-10" data-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -236,8 +236,8 @@
         color: #f8fafc;
         font-weight: 700;
         text-align: center;
-        padding: 6px 0;
-        font-size: 11px;
+        padding: 5px 0;
+        font-size: 10px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
@@ -251,12 +251,12 @@
 
     .calendar-day-cell {
         background: #ffffff;
-        min-height: 85px;
-        padding: 4px 5px;
+        min-height: 48px;
+        padding: 3px 4px;
         position: relative;
         display: flex;
         flex-direction: column;
-        transition: background 0.15s ease;
+        transition: background 0.12s ease;
     }
 
     .calendar-day-cell:hover {
@@ -265,7 +265,7 @@
 
     .calendar-day-cell.is-empty {
         background: #fafafa;
-        opacity: 0.5;
+        opacity: 0.4;
     }
 
     .calendar-day-cell.is-today {
@@ -276,43 +276,43 @@
         background: #2563eb;
         color: #ffffff;
         border-radius: 50%;
-        width: 20px;
-        height: 20px;
+        width: 17px;
+        height: 17px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 10px;
+        font-size: 9px;
     }
 
     .day-number {
         font-weight: 700;
-        font-size: 11px;
+        font-size: 10px;
         color: #475569;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
         line-height: 1;
     }
 
     .day-events-list {
         display: flex;
         flex-direction: column;
-        gap: 3px;
+        gap: 2px;
         overflow-y: auto;
-        max-height: 62px;
+        max-height: 30px;
     }
 
     .event-chip {
         background: #2563eb;
         color: #ffffff;
-        padding: 2px 5px;
-        border-radius: 3px;
-        font-size: 10px;
+        padding: 1px 4px;
+        border-radius: 2px;
+        font-size: 9px;
         font-weight: 600;
         cursor: pointer;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        transition: transform 0.1s ease, background 0.15s ease;
-        line-height: 1.3;
+        transition: transform 0.1s ease, background 0.12s ease;
+        line-height: 1.2;
     }
 
     .event-chip:hover {
@@ -322,27 +322,27 @@
 
     .event-chip-section {
         background: rgba(255, 255, 255, 0.25);
-        padding: 0 3px;
+        padding: 0 2px;
         border-radius: 2px;
-        font-size: 9px;
-        margin-right: 3px;
+        font-size: 8px;
+        margin-right: 2px;
         font-weight: 700;
     }
 
     /* Weekly breakdown styling */
     .week-card {
         border: 1px solid #e2e8f0;
-        border-radius: 6px;
-        margin-bottom: 12px;
+        border-radius: 5px;
+        margin-bottom: 8px;
         overflow: hidden;
         background: #ffffff;
     }
 
     .week-card-header {
         background: #f8fafc;
-        padding: 6px 10px;
+        padding: 5px 8px;
         font-weight: 700;
-        font-size: 11px;
+        font-size: 10px;
         color: #0f172a;
         border-bottom: 1px solid #e2e8f0;
         display: flex;
@@ -353,11 +353,11 @@
     }
 
     .week-event-row {
-        padding: 8px 10px;
+        padding: 6px 8px;
         border-bottom: 1px solid #f1f5f9;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
         transition: background 0.12s ease;
     }
 
@@ -373,21 +373,21 @@
         background: #eff6ff;
         color: #1d4ed8;
         font-weight: 700;
-        padding: 4px 6px;
-        border-radius: 5px;
+        padding: 2px 4px;
+        border-radius: 4px;
         text-align: center;
-        min-width: 44px;
+        min-width: 38px;
         border: 1px solid #dbeafe;
     }
 
     .week-event-date-pill strong {
         display: block;
-        font-size: 13px;
+        font-size: 11px;
         line-height: 1;
     }
 
     .week-event-date-pill small {
-        font-size: 9px;
+        font-size: 8px;
         text-transform: uppercase;
         color: #3b82f6;
     }
@@ -399,7 +399,7 @@
 
     .week-event-title {
         font-weight: 700;
-        font-size: 12px;
+        font-size: 11px;
         color: #1e293b;
         margin-bottom: 1px;
         white-space: nowrap;
@@ -408,7 +408,7 @@
     }
 
     .week-event-meta {
-        font-size: 10px;
+        font-size: 9px;
         color: #64748b;
     }
 
@@ -512,7 +512,7 @@
 
         const selectedObj = monthsList.find(m => m.key === yearMonth);
         if (selectedObj && monthLabelEl) {
-            monthLabelEl.textContent = 'School Calendar — ' + selectedObj.label;
+            monthLabelEl.textContent = 'Calendar — ' + selectedObj.label;
         }
 
         const [year, month] = yearMonth.split('-').map(Number);
@@ -581,7 +581,7 @@
 
     function renderWeeklyBreakdown(year, month, daysInMonth, monthEvents) {
         if (monthEvents.length === 0) {
-            weeklyBreakdownEl.innerHTML = '<div class="text-center text-muted py-20 font-size-12"><i class="fa fa-info-circle mb-5 d-block font-size-18 text-secondary"></i>No events scheduled for this month.</div>';
+            weeklyBreakdownEl.innerHTML = '<div class="text-center text-muted py-15 font-size-11"><i class="fa fa-info-circle mb-3 d-block font-size-16 text-secondary"></i>No events scheduled for this month.</div>';
             return;
         }
 
@@ -599,7 +599,7 @@
         let html = '';
         Object.keys(weeks).forEach(wKey => {
             html += '<div class="week-card">';
-            html += '<div class="week-card-header"><span>' + wKey + '</span> <span class="badge badge-secondary font-size-9">' + weeks[wKey].length + ' event(s)</span></div>';
+            html += '<div class="week-card-header"><span>' + wKey + '</span> <span class="badge badge-secondary font-size-8">' + weeks[wKey].length + ' event(s)</span></div>';
             weeks[wKey].forEach(evt => {
                 const d = new Date(evt.event_date + 'T00:00:00');
                 const dayNum = d.getDate();
@@ -611,7 +611,7 @@
                 html += '<div class="week-event-title">' + escapeHtml(evt.title) + '</div>';
                 html += '<div class="week-event-meta"><i class="fa fa-clock-o text-primary"></i> ' + escapeHtml(evt.event_time) + (evt.location ? ' | <i class="fa fa-map-marker text-danger"></i> ' + escapeHtml(evt.location) : '') + '</div>';
                 if (evt.section && evt.section !== 'All Sections') {
-                    html += '<span class="badge badge-info font-size-9 py-2 px-5 mt-3">' + escapeHtml(evt.section) + '</span>';
+                    html += '<span class="badge badge-info font-size-8 py-1 px-4 mt-2">' + escapeHtml(evt.section) + '</span>';
                 }
                 html += '</div></div>';
             });
