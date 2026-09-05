@@ -33,14 +33,55 @@ class SchoolScheduleService
             }
         }
 
+        $now = Carbon::now();
+        $currentMonthKey = $now->format('Y-m');
+
+        // Build list of months (past 2 months to next 9 months, plus any months with events)
+        $monthsMap = collect();
+        for ($i = -2; $i <= 9; $i++) {
+            $dt = $now->copy()->addMonths($i);
+            $key = $dt->format('Y-m');
+            $monthsMap->put($key, [
+                'key' => $key,
+                'label' => $dt->format('F Y'),
+                'is_current' => $key === $currentMonthKey,
+                'year' => (int) $dt->format('Y'),
+                'month' => (int) $dt->format('m'),
+            ]);
+        }
+
+        $eventMonths = Event::selectRaw("DATE_FORMAT(event_date, '%Y-%m') as month_key, DATE_FORMAT(event_date, '%M %Y') as month_label, YEAR(event_date) as year_num, MONTH(event_date) as month_num")
+            ->groupBy('month_key', 'month_label', 'year_num', 'month_num')
+            ->orderBy('month_key')
+            ->get();
+
+        foreach ($eventMonths as $em) {
+            if ($em->month_key && !$monthsMap->has($em->month_key)) {
+                $monthsMap->put($em->month_key, [
+                    'key' => $em->month_key,
+                    'label' => $em->month_label,
+                    'is_current' => $em->month_key === $currentMonthKey,
+                    'year' => (int) $em->year_num,
+                    'month' => (int) $em->month_num,
+                ]);
+            }
+        }
+
+        $monthsList = $monthsMap->sortBy('key')->values()->all();
+
+        $startDate = $now->copy()->subMonths(3)->startOfMonth();
+        $endDate = $now->copy()->addMonths(9)->endOfMonth();
+
         return [
             'upcoming_events' => Event::with('section')
                 ->where('event_date', '>=', Carbon::today())
                 ->orderBy('event_date')->orderBy('event_time')
                 ->limit(8)->get(),
             'calendar_events' => Event::with('section')
-                ->whereBetween('event_date', [Carbon::now()->startOfMonth(), Carbon::now()->endOfMonth()])
+                ->whereBetween('event_date', [$startDate, $endDate])
                 ->orderBy('event_date')->orderBy('event_time')->get(),
+            'months_list' => $monthsList,
+            'current_month_key' => $currentMonthKey,
             'timetable_entries' => $timetableQuery
                 ->orderByRaw("FIELD(day_of_week, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')")
                 ->orderBy('start_time')->get(),

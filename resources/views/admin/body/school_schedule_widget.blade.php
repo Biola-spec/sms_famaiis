@@ -1,16 +1,39 @@
 @php
     $calendarDate = now();
-    $monthStart = $calendarDate->copy()->startOfMonth();
-    $leadingBlankDays = $monthStart->dayOfWeek;
-    $daysInMonth = $calendarDate->daysInMonth;
+    $currentMonthKey = $current_month_key ?? $calendarDate->format('Y-m');
+    $monthsList = $months_list ?? [];
+    if (empty($monthsList)) {
+        $now = now();
+        for ($i = -2; $i <= 9; $i++) {
+            $dt = $now->copy()->addMonths($i);
+            $key = $dt->format('Y-m');
+            $monthsList[] = [
+                'key' => $key,
+                'label' => $dt->format('F Y'),
+                'is_current' => $key === $currentMonthKey,
+                'year' => (int) $dt->format('Y'),
+                'month' => (int) $dt->format('m'),
+            ];
+        }
+    }
+
     $calendarEvents = collect($calendar_events ?? []);
-    $upcomingEventList = collect($upcoming_events ?? []);
-    $eventsByDate = $calendarEvents->groupBy(fn ($event) => \Carbon\Carbon::parse($event->event_date)->format('Y-m-d'));
+    $eventsPayload = $calendarEvents->map(function ($event) {
+        return [
+            'id' => $event->id,
+            'title' => $event->title,
+            'description' => $event->description ?: '',
+            'event_date' => \Carbon\Carbon::parse($event->event_date)->format('Y-m-d'),
+            'event_time' => $event->event_time ? \Carbon\Carbon::parse($event->event_time)->format('h:i A') : 'All day',
+            'location' => $event->location ?: '',
+            'section' => optional($event->section)->name ?: 'All Sections',
+        ];
+    })->values();
+
     $timetable = collect($timetable_entries ?? []);
     $timetableGroups = $timetable->groupBy(fn ($entry) => optional($entry->section)->name ?: 'All Sections');
     $teacherTimetable = collect($teacher_timetable_entries ?? []);
     $isTeacher = Auth::user()->role === 'Teacher' || Auth::user()->role === 'Staff' || Auth::user()->hasRole('Teacher') || Auth::user()->hasRole('Staff');
-    $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 @endphp
 
 <div class="col-12">
@@ -30,45 +53,62 @@
         <div class="box-body">
             <div class="row">
                 <div class="col-xl-4 col-12 mb-20 mb-xl-0">
-                    <div class="schedule-calendar-title">{{ $calendarDate->format('F Y') }}</div>
-                    <div class="event-calendar-grid">
-                        @foreach(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $dayName)
-                            <div class="event-calendar-weekday">{{ $dayName }}</div>
-                        @endforeach
-                        @for($cell = 0; $cell < 42; $cell++)
-                            @php
-                                $dayNumber = $cell - $leadingBlankDays + 1;
-                                $isInMonth = $dayNumber >= 1 && $dayNumber <= $daysInMonth;
-                                $dateKey = $isInMonth ? $calendarDate->copy()->day($dayNumber)->format('Y-m-d') : null;
-                                $dayEvents = $dateKey ? $eventsByDate->get($dateKey, collect()) : collect();
-                            @endphp
-                            <div class="event-calendar-day {{ !$isInMonth ? 'is-empty' : '' }} {{ $dayEvents->isNotEmpty() ? 'has-event' : '' }} {{ $dateKey === now()->format('Y-m-d') ? 'is-today' : '' }}" title="{{ $dayEvents->pluck('title')->implode(', ') }}">
-                                @if($isInMonth)<span>{{ $dayNumber }}</span>@endif
-                            </div>
-                        @endfor
+                    <div class="d-flex align-items-center justify-content-between mb-10 flex-wrap gap-2">
+                        <h5 class="schedule-calendar-title mb-0">School Calendar</h5>
+                        <select class="form-control form-control-sm schedule-month-select" id="schedule-widget-month-select" style="width: auto; max-width: 170px; display: inline-block;">
+                            @foreach($monthsList as $m)
+                                <option value="{{ $m['key'] }}" {{ $m['key'] === $currentMonthKey ? 'selected' : '' }}>
+                                    {{ $m['label'] }} {{ $m['is_current'] ? '(Current)' : '' }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
-                    <div class="schedule-event-list mt-15">
-                        @forelse($upcomingEventList as $event)
-                            <div class="schedule-event-row">
-                                <strong>{{ \Carbon\Carbon::parse($event->event_date)->format('d M') }}</strong>
-                                <span>{{ $event->title }} <small>{{ $event->event_time ? \Carbon\Carbon::parse($event->event_time)->format('h:i A') : 'All day' }}</small></span>
-                            </div>
-                        @empty
-                            <div class="text-muted">No upcoming school events.</div>
-                        @endforelse
+
+                    <div class="event-calendar-grid" id="schedule-widget-grid">
+                        <!-- JS populated -->
+                    </div>
+
+                    <div class="schedule-event-list mt-15" id="schedule-widget-event-list">
+                        <!-- JS populated events for selected month -->
                     </div>
                 </div>
+
                 <div class="col-xl-8 col-12">
                     @if($isTeacher)
                         <div class="teacher-schedule-panel">
-                            <div class="teacher-schedule-heading"><div><span class="modal-eyebrow">MY TEACHING SCHEDULE</span><h5>Classes I Am Taking</h5></div><span class="teacher-period-count">{{ $teacherTimetable->count() }} periods</span></div>
+                            <div class="teacher-schedule-heading">
+                                <div><span class="modal-eyebrow">MY TEACHING SCHEDULE</span><h5>Classes I Am Taking</h5></div>
+                                <span class="teacher-period-count">{{ $teacherTimetable->count() }} periods</span>
+                            </div>
                             <div class="table-responsive schedule-table-wrap">
-                                <table class="table table-bordered table-sm mb-0 schedule-modal-table"><thead><tr><th>Day</th><th>Time</th><th>Section / Class</th><th>Subject</th><th>Room</th></tr></thead><tbody>
-                                @forelse($teacherTimetable as $entry)<tr><td><strong>{{ $entry->day_of_week }}</strong></td><td>{{ \Carbon\Carbon::parse($entry->start_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($entry->end_time)->format('H:i') }}</td><td>{{ optional($entry->section)->name ?: 'All sections' }} / {{ optional($entry->studentClass)->name }}</td><td>{{ optional($entry->subject)->name }}</td><td>{{ $entry->room ?: '-' }}</td></tr>@empty<tr><td colspan="5" class="text-center text-muted">No teaching periods have been assigned to you yet.</td></tr>@endforelse
-                                </tbody></table>
+                                <table class="table table-bordered table-sm mb-0 schedule-modal-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Day</th>
+                                            <th>Time</th>
+                                            <th>Section / Class</th>
+                                            <th>Subject</th>
+                                            <th>Room</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($teacherTimetable as $entry)
+                                            <tr>
+                                                <td><strong>{{ $entry->day_of_week }}</strong></td>
+                                                <td>{{ \Carbon\Carbon::parse($entry->start_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($entry->end_time)->format('H:i') }}</td>
+                                                <td>{{ optional($entry->section)->name ?: 'All sections' }} / {{ optional($entry->studentClass)->name }}</td>
+                                                <td>{{ optional($entry->subject)->name }}</td>
+                                                <td>{{ $entry->room ?: '-' }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr><td colspan="5" class="text-center text-muted">No teaching periods have been assigned to you yet.</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     @endif
+
                     <h5 class="all-sections-heading">View Section Timetables</h5>
                     @forelse($timetableGroups as $sectionName => $sectionEntries)
                         <button type="button" class="section-timetable-button" data-timetable-modal="timetable-modal-{{ $loop->index }}">
@@ -97,7 +137,18 @@
                 <div class="table-responsive">
                     <table class="table table-bordered table-sm mb-0 schedule-modal-table">
                         <thead><tr><th>Day</th><th>Time</th><th>Class</th><th>Subject</th><th>Teacher</th><th>Room</th></tr></thead>
-                        <tbody>@foreach($sectionEntries as $entry)<tr><td><strong>{{ $entry->day_of_week }}</strong></td><td>{{ \Carbon\Carbon::parse($entry->start_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($entry->end_time)->format('H:i') }}</td><td>{{ optional($entry->studentClass)->name }}</td><td>{{ optional($entry->subject)->name }}</td><td>{{ optional($entry->teacher)->name ?: 'Unassigned' }}</td><td>{{ $entry->room ?: '-' }}</td></tr>@endforeach</tbody>
+                        <tbody>
+                            @foreach($sectionEntries as $entry)
+                                <tr>
+                                    <td><strong>{{ $entry->day_of_week }}</strong></td>
+                                    <td>{{ \Carbon\Carbon::parse($entry->start_time)->format('H:i') }} - {{ \Carbon\Carbon::parse($entry->end_time)->format('H:i') }}</td>
+                                    <td>{{ optional($entry->studentClass)->name }}</td>
+                                    <td>{{ optional($entry->subject)->name }}</td>
+                                    <td>{{ optional($entry->teacher)->name ?: 'Unassigned' }}</td>
+                                    <td>{{ $entry->room ?: '-' }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -107,27 +158,143 @@
 
 <style>
     .school-schedule-widget .event-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }
-    .school-schedule-widget .event-calendar-weekday { color:#64748b; font-size:10px; font-weight:700; text-align:center; padding:4px 0; }
-    .school-schedule-widget .event-calendar-day { min-height:29px; border:1px solid #e5e7eb; border-radius:3px; padding:5px; font-size:11px; text-align:center; }
+    .school-schedule-widget .event-calendar-weekday { color:#64748b; font-size:10px; font-weight:700; text-align:center; padding:4px 0; text-transform:uppercase; }
+    .school-schedule-widget .event-calendar-day { min-height:30px; border:1px solid #e5e7eb; border-radius:4px; padding:4px; font-size:11px; text-align:center; position:relative; background:#f8fafc; color:#334155; }
     .school-schedule-widget .event-calendar-day.is-empty { border-color:transparent; background:transparent; }
-    .school-schedule-widget .event-calendar-day.has-event { background:#e8f2fc; color:#1d4ed8; font-weight:700; }
-    .school-schedule-widget .event-calendar-day.is-today { outline:2px solid #2e86de; outline-offset:-2px; }
-    .schedule-calendar-title { font-size:16px; font-weight:700; margin-bottom:8px; }
+    .school-schedule-widget .event-calendar-day.has-event { background:#1e40af; color:#ffffff; font-weight:700; cursor:pointer; }
+    .school-schedule-widget .event-calendar-day.has-event::after { content:""; position:absolute; bottom:3px; left:50%; transform:translateX(-50%); width:12px; height:3px; background:#60a5fa; border-radius:2px; }
+    .school-schedule-widget .event-calendar-day.is-today { border:2px solid #2563eb; font-weight:800; }
+    .schedule-calendar-title { font-size:15px; font-weight:700; color:#1e293b; }
+    .schedule-month-select { font-weight:600; border-radius:6px; border:1px solid #cbd5e1; font-size:12px; height:30px; padding:2px 8px; }
     .section-timetable-button { width:100%; display:flex; align-items:center; gap:10px; border:1px solid #dbe5f0; border-radius:7px; background:#fff; padding:12px 14px; margin-bottom:9px; text-align:left; color:#1e2e4a; transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease; cursor:pointer; }
-    .section-timetable-button:hover { transform:translateY(-1px); border-color:#2e86de; box-shadow:0 5px 14px rgba(46,134,222,.14); }.section-timetable-button strong,.section-timetable-button small { display:block; }.section-timetable-button strong { font-size:12px; }.section-timetable-button small { color:#64748b; font-size:10px; margin-top:2px; }.section-timetable-icon { width:30px; height:30px; display:grid; place-items:center; border-radius:6px; color:#2563eb; background:#e8f2fc; font-size:13px; }.section-timetable-arrow { margin-left:auto; color:#94a3b8; font-size:11px; }
-    .school-timetable-modal { display:none; position:fixed; inset:0; z-index:2000; align-items:center; justify-content:center; padding:20px; }.school-timetable-modal.is-open { display:flex; }.school-timetable-modal-backdrop { position:absolute; inset:0; background:rgba(8,15,30,.72); backdrop-filter:blur(3px); }.school-timetable-dialog { position:relative; z-index:1; width:min(940px, 100%); max-height:min(680px, 90vh); overflow:hidden; border-radius:10px; background:#fff; box-shadow:0 20px 60px rgba(0,0,0,.28); }.school-timetable-modal-header { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; background:#132a46; color:#fff; }.school-timetable-modal-header h4 { margin:3px 0 0; color:#fff; font-size:18px; }.modal-eyebrow { font-size:9px; letter-spacing:1.2px; color:#9bc7f4; }.school-timetable-close { border:0; width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,.12); color:#fff; cursor:pointer; }.school-timetable-close:hover { background:#e66767; }.school-timetable-modal-body { max-height:calc(min(680px, 90vh) - 86px); overflow:auto; padding:18px 22px; }.schedule-modal-table th { font-size:10px; white-space:nowrap; background:#f1f6fb; }.schedule-modal-table td { font-size:11px; padding:7px 8px; vertical-align:middle; }
-    .teacher-schedule-panel { margin-bottom:18px; padding:12px; border:1px solid #dbe5f0; border-radius:7px; background:#f8fbff; }.teacher-schedule-heading { display:flex; align-items:center; justify-content:space-between; margin-bottom:7px; }.teacher-schedule-heading h5,.all-sections-heading { margin:3px 0 8px; font-size:12px; font-weight:700; }.teacher-period-count { color:#2563eb; font-size:10px; font-weight:700; }.all-sections-heading { color:#334155; }
-    body.dark-skin .section-timetable-button { background:#172131; border-color:#334155; color:#e5e7eb; }.dark-skin .teacher-schedule-panel { background:#172131; border-color:#334155; }.dark-skin .all-sections-heading { color:#e5e7eb; }.dark-skin .school-timetable-dialog { background:#111827; }.dark-skin .schedule-modal-table th { background:#1f2937; color:#e5e7eb; }.dark-skin .schedule-modal-table td { color:#d1d5db; }
-    .schedule-event-row { display:flex; gap:10px; padding:7px 0; border-bottom:1px solid #e5e7eb; font-size:12px; }
-    .schedule-event-row strong { min-width:42px; color:#2563eb; }
-    .schedule-event-row span { flex:1; }.schedule-event-row small { display:block; color:#64748b; margin-top:2px; }
-    .schedule-table-wrap { max-height:320px; overflow:auto; }.schedule-table-wrap th { white-space:nowrap; font-size:10px; }.schedule-table-wrap td { font-size:10px; vertical-align:middle; padding:5px 6px; }
-    body.dark-skin .school-schedule-widget .event-calendar-day { border-color:#374151; }.gap-2 { gap:8px; }
+    .section-timetable-button:hover { transform:translateY(-1px); border-color:#2e86de; box-shadow:0 5px 14px rgba(46,134,222,.14); }
+    .section-timetable-button strong, .section-timetable-button small { display:block; }
+    .section-timetable-button strong { font-size:12px; }
+    .section-timetable-button small { color:#64748b; font-size:10px; margin-top:2px; }
+    .section-timetable-icon { width:30px; height:30px; display:grid; place-items:center; border-radius:6px; color:#2563eb; background:#e8f2fc; font-size:13px; }
+    .section-timetable-arrow { margin-left:auto; color:#94a3b8; font-size:11px; }
+    .school-timetable-modal { display:none; position:fixed; inset:0; z-index:2000; align-items:center; justify-content:center; padding:20px; }
+    .school-timetable-modal.is-open { display:flex; }
+    .school-timetable-modal-backdrop { position:absolute; inset:0; background:rgba(8,15,30,.72); backdrop-filter:blur(3px); }
+    .school-timetable-dialog { position:relative; z-index:1; width:min(940px, 100%); max-height:min(680px, 90vh); overflow:hidden; border-radius:10px; background:#fff; box-shadow:0 20px 60px rgba(0,0,0,.28); }
+    .school-timetable-modal-header { display:flex; align-items:center; justify-content:space-between; padding:18px 22px; background:#132a46; color:#fff; }
+    .school-timetable-modal-header h4 { margin:3px 0 0; color:#fff; font-size:18px; }
+    .modal-eyebrow { font-size:9px; letter-spacing:1.2px; color:#9bc7f4; }
+    .school-timetable-close { border:0; width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,.12); color:#fff; cursor:pointer; }
+    .school-timetable-close:hover { background:#e66767; }
+    .school-timetable-modal-body { max-height:calc(min(680px, 90vh) - 86px); overflow:auto; padding:18px 22px; }
+    .schedule-modal-table th { font-size:10px; white-space:nowrap; background:#f1f6fb; }
+    .schedule-modal-table td { font-size:11px; padding:7px 8px; vertical-align:middle; }
+    .teacher-schedule-panel { margin-bottom:18px; padding:12px; border:1px solid #dbe5f0; border-radius:7px; background:#f8fbff; }
+    .teacher-schedule-heading { display:flex; align-items:center; justify-content:space-between; margin-bottom:7px; }
+    .teacher-schedule-heading h5, .all-sections-heading { margin:3px 0 8px; font-size:12px; font-weight:700; }
+    .teacher-period-count { color:#2563eb; font-size:10px; font-weight:700; }
+    .all-sections-heading { color:#334155; }
+    body.dark-skin .section-timetable-button { background:#172131; border-color:#334155; color:#e5e7eb; }
+    body.dark-skin .teacher-schedule-panel { background:#172131; border-color:#334155; }
+    body.dark-skin .all-sections-heading, body.dark-skin .schedule-calendar-title { color:#e5e7eb; }
+    body.dark-skin .school-timetable-dialog { background:#111827; }
+    body.dark-skin .schedule-modal-table th { background:#1f2937; color:#e5e7eb; }
+    body.dark-skin .schedule-modal-table td { color:#d1d5db; }
+    .schedule-event-row { display:flex; gap:10px; padding:8px; border:1px solid #e2e8f0; border-radius:6px; margin-bottom:6px; background:#ffffff; font-size:12px; align-items:center; }
+    .schedule-event-row strong { min-width:48px; color:#1e40af; font-weight:700; background:#dbeafe; padding:4px 6px; border-radius:4px; text-align:center; }
+    .schedule-event-row span { flex:1; color:#1e293b; font-weight:600; }
+    .schedule-event-row small { display:block; color:#64748b; font-weight:400; font-size:11px; margin-top:2px; }
+    body.dark-skin .schedule-event-row { background:#1e293b; border-color:#334155; }
+    body.dark-skin .schedule-event-row span { color:#f1f5f9; }
+    body.dark-skin .schedule-event-row strong { background:#1e3a8a; color:#93c5fd; }
+    .schedule-table-wrap { max-height:320px; overflow:auto; }
+    .schedule-table-wrap th { white-space:nowrap; font-size:10px; }
+    .schedule-table-wrap td { font-size:10px; vertical-align:middle; padding:5px 6px; }
+    body.dark-skin .school-schedule-widget .event-calendar-day { background:#1e293b; border-color:#334155; color:#cbd5e1; }
+    body.dark-skin .school-schedule-widget .event-calendar-day.has-event { background:#2563eb; color:#ffffff; }
+    .gap-2 { gap:8px; }
     body.timetable-modal-open { overflow:hidden; }
 </style>
 
 <script>
     (function () {
+        const eventsData = @json($eventsPayload);
+        const gridEl = document.getElementById('schedule-widget-grid');
+        const listEl = document.getElementById('schedule-widget-event-list');
+        const selectEl = document.getElementById('schedule-widget-month-select');
+
+        const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+        function renderCalendar(yearMonth) {
+            if (!gridEl || !listEl) return;
+
+            const [year, month] = yearMonth.split('-').map(Number);
+            const firstDay = new Date(year, month - 1, 1);
+            const lastDay = new Date(year, month, 0);
+            const daysInMonth = lastDay.getDate();
+            const startDayOfWeek = firstDay.getDay();
+
+            const today = new Date();
+            const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+
+            const monthEvents = eventsData.filter(e => e.event_date.startsWith(yearMonth));
+            const eventsByDate = {};
+            monthEvents.forEach(e => {
+                if (!eventsByDate[e.event_date]) eventsByDate[e.event_date] = [];
+                eventsByDate[e.event_date].push(e);
+            });
+
+            // Render Grid
+            let html = '';
+            weekdays.forEach(wd => {
+                html += '<div class="event-calendar-weekday">' + wd + '</div>';
+            });
+
+            const totalCells = 42;
+            for (let cell = 0; cell < totalCells; cell++) {
+                const dayNum = cell - startDayOfWeek + 1;
+                const isInMonth = dayNum >= 1 && dayNum <= daysInMonth;
+                if (isInMonth) {
+                    const dateStr = yearMonth + '-' + String(dayNum).padStart(2, '0');
+                    const dayEvts = eventsByDate[dateStr] || [];
+                    const hasEvent = dayEvts.length > 0;
+                    const isToday = dateStr === todayStr;
+                    const titleText = dayEvts.map(e => e.title).join(', ');
+
+                    html += '<div class="event-calendar-day ' + (hasEvent ? 'has-event' : '') + ' ' + (isToday ? 'is-today' : '') + '" title="' + (titleText || '') + '"><span>' + dayNum + '</span></div>';
+                } else {
+                    html += '<div class="event-calendar-day is-empty"></div>';
+                }
+            }
+            gridEl.innerHTML = html;
+
+            // Render Events List for Selected Month
+            if (monthEvents.length === 0) {
+                listEl.innerHTML = '<div class="text-muted text-center p-15 font-size-12">No events scheduled for this month.</div>';
+            } else {
+                let listHtml = '';
+                monthEvents.sort((a, b) => a.event_date.localeCompare(b.event_date));
+                monthEvents.forEach(e => {
+                    const d = new Date(e.event_date + 'T00:00:00');
+                    const dayFormatted = d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
+                    listHtml += '<div class="schedule-event-row">';
+                    listHtml += '<strong>' + dayFormatted + '</strong>';
+                    listHtml += '<span>' + escapeHtml(e.title) + ' <small><i class="fa fa-clock-o"></i> ' + escapeHtml(e.event_time) + (e.location ? ' | <i class="fa fa-map-marker"></i> ' + escapeHtml(e.location) : '') + (e.section && e.section !== 'All Sections' ? ' (' + escapeHtml(e.section) + ')' : '') + '</small></span>';
+                    listHtml += '</div>';
+                });
+                listEl.innerHTML = listHtml;
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        if (selectEl) {
+            selectEl.addEventListener('change', function () {
+                renderCalendar(this.value);
+            });
+            renderCalendar(selectEl.value);
+        }
+
+        // Modal scripts
         const openModal = function (id) { const modal = document.getElementById(id); if (modal) { modal.classList.add('is-open'); modal.setAttribute('aria-hidden', 'false'); document.body.classList.add('timetable-modal-open'); } };
         const closeModal = function (modal) { if (modal) { modal.classList.remove('is-open'); modal.setAttribute('aria-hidden', 'true'); document.body.classList.remove('timetable-modal-open'); } };
         document.querySelectorAll('[data-timetable-modal]').forEach(function (button) { button.addEventListener('click', function () { openModal(button.dataset.timetableModal); }); });

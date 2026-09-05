@@ -1,13 +1,36 @@
 @php
     $calendarDate = now();
-    $monthStart = $calendarDate->copy()->startOfMonth();
-    $daysInMonth = $calendarDate->daysInMonth;
-    $leadingBlankDays = $monthStart->dayOfWeek;
+    $currentMonthKey = $current_month_key ?? $calendarDate->format('Y-m');
+    $monthsList = $months_list ?? [];
+    if (empty($monthsList)) {
+        $now = now();
+        for ($i = -2; $i <= 9; $i++) {
+            $dt = $now->copy()->addMonths($i);
+            $key = $dt->format('Y-m');
+            $monthsList[] = [
+                'key' => $key,
+                'label' => $dt->format('F Y'),
+                'is_current' => $key === $currentMonthKey,
+                'year' => (int) $dt->format('Y'),
+                'month' => (int) $dt->format('m'),
+            ];
+        }
+    }
+
     $calendarEvents = collect($calendar_events ?? []);
     $upcomingEventList = collect($upcoming_events ?? []);
-    $eventsByDate = $calendarEvents->groupBy(function ($event) {
-        return \Carbon\Carbon::parse($event->event_date)->format('Y-m-d');
-    });
+
+    $eventsPayload = $calendarEvents->map(function ($event) {
+        return [
+            'id' => $event->id,
+            'title' => $event->title,
+            'description' => $event->description ?: '',
+            'event_date' => \Carbon\Carbon::parse($event->event_date)->format('Y-m-d'),
+            'event_time' => $event->event_time ? date('H:i', strtotime($event->event_time)) : __('ui.all_day'),
+            'location' => $event->location ?: '',
+            'section' => optional($event->section)->name ?: 'All Sections',
+        ];
+    })->values();
 
     $now = now();
     $nextEvent = $upcomingEventList
@@ -33,47 +56,27 @@
 
 <div class="col-xl-4 col-12">
     <div class="box dashboard-event-calendar">
-        <div class="box-header with-border d-flex align-items-center justify-content-between">
+        <div class="box-header with-border d-flex align-items-center justify-content-between flex-wrap gap-2">
             <div>
                 <h4 class="box-title mb-0">{{ __('ui.calendar') }}</h4>
-                <small class="subtitle">{{ $calendarDate->format('F Y') }}</small>
             </div>
-            @if(Auth::user()->role == 'Admin' || Auth::user()->hasRole('Admin'))
-                <a href="{{ route('event.view') }}" class="btn btn-sm btn-info-light">{{ __('ui.manage') }}</a>
-            @endif
+            <div class="d-flex align-items-center gap-2">
+                <select class="form-control form-control-sm dashboard-events-month-select" id="events-widget-month-select" style="width: auto; max-width: 150px; font-weight: 600;">
+                    @foreach($monthsList as $m)
+                        <option value="{{ $m['key'] }}" {{ $m['key'] === $currentMonthKey ? 'selected' : '' }}>
+                            {{ $m['label'] }} {{ $m['is_current'] ? '(Current)' : '' }}
+                        </option>
+                    @endforeach
+                </select>
+                @if(Auth::user()->role == 'Admin' || Auth::user()->hasRole('Admin'))
+                    <a href="{{ route('event.view') }}" class="btn btn-sm btn-info-light">{{ __('ui.manage') }}</a>
+                @endif
+            </div>
         </div>
 
         <div class="box-body">
             <div class="event-calendar-grid" id="event-calendar-grid">
-                @foreach(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as $dayName)
-                    <div class="event-calendar-weekday">{{ $dayName }}</div>
-                @endforeach
-
-                @for($cell = 0; $cell < 42; $cell++)
-                    @php
-                        $dayNumber = $cell - $leadingBlankDays + 1;
-                        $isInMonth = $dayNumber >= 1 && $dayNumber <= $daysInMonth;
-                        $dateKey = $isInMonth ? $calendarDate->copy()->day($dayNumber)->format('Y-m-d') : null;
-                        $dayEvents = $dateKey ? $eventsByDate->get($dateKey, collect()) : collect();
-                        $hasEvent = $dayEvents->isNotEmpty();
-                        $isToday = $dateKey === now()->format('Y-m-d');
-                        $popupPayload = $dayEvents->map(function ($event) {
-                            return [
-                                'title' => $event->title,
-                                'time' => $event->event_time ? date('H:i', strtotime($event->event_time)) : __('ui.all_day'),
-                                'description' => $event->description ?: '',
-                                'location' => $event->location ?: '',
-                            ];
-                        })->values();
-                    @endphp
-
-                    <div class="event-calendar-day {{ !$isInMonth ? 'is-empty' : '' }} {{ $hasEvent ? 'has-event' : '' }} {{ $isToday ? 'is-today' : '' }}"
-                         @if($hasEvent) data-events='@json($popupPayload)' @endif>
-                        @if($isInMonth)
-                            <span>{{ $dayNumber }}</span>
-                        @endif
-                    </div>
-                @endfor
+                <!-- Populated via JS -->
             </div>
 
             <div id="event-calendar-popup" class="event-calendar-popup" hidden>
@@ -106,29 +109,8 @@
                 @endif
             </div>
 
-            <div class="event-list mt-15">
-                @forelse($upcomingEventList->take(4) as $event)
-                    <div class="event-list-item">
-                        <div class="event-date-pill">
-                            <strong>{{ date('d', strtotime($event->event_date)) }}</strong>
-                            <span>{{ date('M', strtotime($event->event_date)) }}</span>
-                        </div>
-                        <div class="event-list-copy">
-                            <p class="mb-0 font-weight-600">{{ $event->title }}</p>
-                            <small>
-                                {{ $event->event_time ? date('H:i', strtotime($event->event_time)) : __('ui.all_day') }}
-                                @if($event->location)
-                                    <span class="mx-5">|</span>{{ $event->location }}
-                                @endif
-                            </small>
-                        </div>
-                    </div>
-                @empty
-                    @if(!$nextEvent)
-                    @else
-                        <div class="event-empty-state">{{ __('ui.no_upcoming_events') }}</div>
-                    @endif
-                @endforelse
+            <div class="event-list mt-15" id="events-widget-month-events-list">
+                <!-- Selected month events list -->
             </div>
         </div>
     </div>
@@ -178,6 +160,7 @@
     .event-calendar-day.is-today {
         border-color: #0b1f3a;
         color: #0b1f3a !important;
+        font-weight: 800;
     }
 
     .event-calendar-day.has-event {
@@ -337,14 +320,19 @@
 
 <script>
 (function () {
-    var grid = document.getElementById('event-calendar-grid');
-    var popup = document.getElementById('event-calendar-popup');
+    const eventsData = @json($eventsPayload);
+    const grid = document.getElementById('event-calendar-grid');
+    const popup = document.getElementById('event-calendar-popup');
+    const selectEl = document.getElementById('events-widget-month-select');
+    const monthListEl = document.getElementById('events-widget-month-events-list');
+
     if (!grid || !popup) return;
 
-    var inner = popup.querySelector('.event-calendar-popup-inner');
-    var hoverTimer = null;
-    var activeCell = null;
-    var isTouch = window.matchMedia('(hover: none)').matches;
+    const inner = popup.querySelector('.event-calendar-popup-inner');
+    let hoverTimer = null;
+    let activeCell = null;
+    const isTouch = window.matchMedia('(hover: none)').matches;
+    const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     function hidePopup() {
         popup.hidden = true;
@@ -353,14 +341,10 @@
 
     function renderEvents(events) {
         inner.innerHTML = events.map(function (event) {
-            var desc = event.description ? '<p>' + event.description + '</p>' : '';
-            var loc = event.location ? ' · ' + event.location : '';
-            return '<div class="event-calendar-popup-item"><strong></strong><small></small>' + desc + '</div>';
+            var desc = event.description ? '<p>' + escapeHtml(event.description) + '</p>' : '';
+            var loc = event.location ? ' · ' + escapeHtml(event.location) : '';
+            return '<div class="event-calendar-popup-item"><strong>' + escapeHtml(event.title) + '</strong><small>' + escapeHtml(event.event_time) + loc + '</small>' + desc + '</div>';
         }).join('');
-        Array.prototype.forEach.call(inner.querySelectorAll('.event-calendar-popup-item'), function (item, i) {
-            item.querySelector('strong').textContent = events[i].title;
-            item.querySelector('small').textContent = events[i].time + (events[i].location ? ' · ' + events[i].location : '');
-        });
     }
 
     function showPopup(cell, clientX, clientY) {
@@ -378,6 +362,91 @@
         popup.style.left = left + 'px';
         popup.style.top = top + 'px';
         activeCell = cell;
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function renderCalendarGrid(yearMonth) {
+        const [year, month] = yearMonth.split('-').map(Number);
+        const firstDay = new Date(year, month - 1, 1);
+        const lastDay = new Date(year, month, 0);
+        const daysInMonth = lastDay.getDate();
+        const startDayOfWeek = firstDay.getDay();
+
+        const today = new Date();
+        const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+
+        const monthEvents = eventsData.filter(e => e.event_date.startsWith(yearMonth));
+        const eventsByDate = {};
+        monthEvents.forEach(e => {
+            if (!eventsByDate[e.event_date]) eventsByDate[e.event_date] = [];
+            eventsByDate[e.event_date].push(e);
+        });
+
+        let html = '';
+        weekdays.forEach(wd => {
+            html += '<div class="event-calendar-weekday">' + wd + '</div>';
+        });
+
+        for (let cell = 0; cell < 42; cell++) {
+            const dayNum = cell - startDayOfWeek + 1;
+            const isInMonth = dayNum >= 1 && dayNum <= daysInMonth;
+            if (isInMonth) {
+                const dateStr = yearMonth + '-' + String(dayNum).padStart(2, '0');
+                const dayEvts = eventsByDate[dateStr] || [];
+                const hasEvent = dayEvts.length > 0;
+                const isToday = dateStr === todayStr;
+                const payload = dayEvts.map(e => ({
+                    title: e.title,
+                    event_time: e.event_time,
+                    description: e.description,
+                    location: e.location
+                }));
+
+                html += '<div class="event-calendar-day ' + (isInMonth ? '' : 'is-empty') + ' ' + (hasEvent ? 'has-event' : '') + ' ' + (isToday ? 'is-today' : '') + '"';
+                if (hasEvent) {
+                    html += ' data-events=\'' + JSON.stringify(payload).replace(/'/g, "&apos;") + '\'';
+                }
+                html += '><span>' + dayNum + '</span></div>';
+            } else {
+                html += '<div class="event-calendar-day is-empty"></div>';
+            }
+        }
+        grid.innerHTML = html;
+
+        // Render List under calendar
+        if (monthListEl) {
+            if (monthEvents.length === 0) {
+                monthListEl.innerHTML = '<div class="event-empty-state">No events scheduled for this month</div>';
+            } else {
+                let listHtml = '';
+                monthEvents.sort((a, b) => a.event_date.localeCompare(b.event_date));
+                monthEvents.slice(0, 4).forEach(e => {
+                    const d = new Date(e.event_date + 'T00:00:00');
+                    const dayNum = d.getDate();
+                    const monthStr = d.toLocaleDateString('en-US', { month: 'short' });
+
+                    listHtml += '<div class="event-list-item">';
+                    listHtml += '<div class="event-date-pill"><strong>' + dayNum + '</strong><span>' + monthStr + '</span></div>';
+                    listHtml += '<div class="event-list-copy">';
+                    listHtml += '<p class="mb-0 font-weight-600">' + escapeHtml(e.title) + '</p>';
+                    listHtml += '<small>' + escapeHtml(e.event_time) + (e.location ? '<span class="mx-5">|</span>' + escapeHtml(e.location) : '') + '</small>';
+                    listHtml += '</div></div>';
+                });
+                monthListEl.innerHTML = listHtml;
+            }
+        }
+    }
+
+    if (selectEl) {
+        selectEl.addEventListener('change', function () {
+            hidePopup();
+            renderCalendarGrid(this.value);
+        });
+        renderCalendarGrid(selectEl.value);
     }
 
     grid.addEventListener('mouseover', function (e) {

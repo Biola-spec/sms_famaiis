@@ -15,8 +15,10 @@ class EventController extends Controller
 {
     public function ViewEvent()
     {
-        $data['allData'] = Event::orderBy('event_date', 'asc')->get();
-        return view('backend.event.view_event', $data);
+        $user = Auth::user();
+        $scheduleData = app(\App\Services\SchoolScheduleService::class)->dashboardData($user);
+        $data['allData'] = Event::with('section')->orderBy('event_date', 'asc')->get();
+        return view('backend.event.view_event', array_merge($data, $scheduleData));
     }
 
     public function AddEvent()
