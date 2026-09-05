@@ -15,10 +15,15 @@
                             @foreach($questions as $q)
                             <div class="mb-4 p-3 border rounded">
                                 <p><strong>Q{{ $q->question_number }}.</strong> {{ $q->question }}</p>
-                                @foreach(['A' => $q->option_a, 'B' => $q->option_b, 'C' => $q->option_c, 'D' => $q->option_d] as $opt => $text)
+                                @foreach(['A', 'B', 'C', 'D'] as $opt)
+                                    @php 
+                                        $optLower = strtolower($opt);
+                                        $text = $q->$optLower;
+                                        if ($opt !== 'A' && !$text) continue;
+                                    @endphp
                                 <p>
                                     <input class="with-gap" type="radio" name="answers[q{{ $q->question_number }}]" value="{{ $opt }}" id="q{{ $q->question_number }}{{ $opt }}" required>
-                                    <label for="q{{ $q->question_number }}{{ $opt }}">{{ $opt }}. {{ $text }}</label>
+                                    <label for="q{{ $q->question_number }}{{ $opt }}">{{ $opt }}. {{ $text ?: '&nbsp;' }}</label>
                                 </p>
                                 @endforeach
                             </div>

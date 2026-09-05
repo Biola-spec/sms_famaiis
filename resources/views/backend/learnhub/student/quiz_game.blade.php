@@ -119,10 +119,18 @@
 (function() {
     @php
         $gameQuestions = $questions->map(function ($q) {
+            $options = [];
+            foreach (['A', 'B', 'C', 'D'] as $opt) {
+                $optLower = strtolower($opt);
+                $text = $q->$optLower;
+                if ($opt === 'A' || $text) {
+                    $options[$opt] = $text ?: '&nbsp;';
+                }
+            }
             return [
                 'num' => $q->question_number,
                 'question' => $q->question,
-                'options' => ['A' => $q->option_a, 'B' => $q->option_b, 'C' => $q->option_c, 'D' => $q->option_d],
+                'options' => $options,
                 'correct' => $q->correct_answer,
             ];
         })->values();

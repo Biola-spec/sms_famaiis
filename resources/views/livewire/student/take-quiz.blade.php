@@ -106,7 +106,7 @@
     <div class="col-md-8">
         <div class="box">
             <div class="box-header with-border">
-                <h3 class="box-title">{{ $quiz->title }}</h3>
+                <h3 class="box-title">{{ $quizTitle }}</h3>
                 <div class="pull-right">
                     <span class="badge badge-primary">Question {{ $currentQuestionIndex + 1 }} of {{ count($questions) }}</span>
                 </div>
@@ -118,35 +118,33 @@
                     $question = $questions[$index];
                 @endphp
 
-                <div class="p-2" wire:key="question-{{ $question->id }}">
+                <div class="p-2" wire:key="question-{{ $question['id'] }}">
                     <!-- Passages -->
-                    @foreach($quiz->passages as $passage)
-                        @if(($index + 1) >= $passage->start_number && ($index + 1) <= $passage->end_number)
+                    @foreach($activePassages as $passage)
                         <div class="mb-5 p-4 passage-box">
                             <h5 class="font-weight-bold mb-3 d-flex align-items-center text-info">
-                                <i class="fa fa-file-text-o mr-2"></i> Reading Passage (Q{{ $passage->start_number }}-{{ $passage->end_number }})
+                                <i class="fa fa-file-text-o mr-2"></i> Reading Passage (Q{{ $passage['start_number'] }}-{{ $passage['end_number'] }})
                             </h5>
                             <div class="passage-content">
-                                {!! $passage->content !!}
+                                {!! $passage['content'] !!}
                             </div>
-                            @if($passage->image)
+                            @if($passage['image'])
                             <div class="mt-3">
-                                <img src="{{ asset('upload/questions/' . $passage->image) }}" class="img-fluid rounded">
+                                <img src="{{ asset('upload/questions/' . $passage['image']) }}" class="img-fluid rounded">
                             </div>
                             @endif
                         </div>
-                        @endif
                     @endforeach
 
                     <div class="question-content">
                         <h4 class="mb-4">
-                            {!! $question->question !!}
+                            {!! $question['question'] !!}
                         </h4>
                     </div>
 
-                    @if($question->image)
+                    @if($question['image'])
                     <div class="mb-5 question-image-container">
-                        <img src="{{ asset('upload/questions/' . $question->image) }}">
+                        <img src="{{ asset('upload/questions/' . $question['image']) }}">
                     </div>
                     @endif
                     
@@ -154,16 +152,17 @@
                         @foreach(['A', 'B', 'C', 'D', 'E'] as $opt)
                             @php 
                                 $optLower = strtolower($opt);
-                                $optText = $question->{"option_$optLower"};
-                                $optImg = $question->{"image_$optLower"};
-                                $isSelected = ($answers[$question->id] ?? '') == $opt;
-                                if(!$optText && !$optImg && $opt == 'E') continue;
+                                $optText = $question["option_$optLower"];
+                                $optImg = $question["image_$optLower"];
+                                $qid = (string) $question['id'];
+                                $isSelected = ($answers[$qid] ?? '') == $opt;
+                                if ($opt !== 'A' && !$optText && !$optImg) continue;
                             @endphp
                             <label class="quiz-option {{ $isSelected ? 'selected' : '' }}">
-                                <input type="radio" wire:model.live="answers.{{ $question->id }}" value="{{ $opt }}" style="display: none;">
+                                <input type="radio" wire:model.live="answers.{{ $qid }}" value="{{ $opt }}" style="display: none;">
                                 <div class="option-letter">{{ $opt }}</div>
                                 <div class="flex-grow-1">
-                                    <div class="option-content">{!! $optText !!}</div>
+                                    <div class="option-content">{!! $optText ?: '&nbsp;' !!}</div>
                                     @if($optImg)
                                     <div class="mt-2">
                                         <img src="{{ asset('upload/questions/' . $optImg) }}" class="img-fluid rounded border" style="max-height: 120px;">
@@ -230,8 +229,9 @@
                 <div class="box-body p-3">
                     <div class="d-flex flex-wrap justify-content-start">
                         @foreach($questions as $idx => $q)
+                            @php $navQid = (string) $q['id']; @endphp
                             <button type="button" wire:click="goToQuestion({{ $idx }})" 
-                               class="btn btn-sm q-nav-btn {{ !empty($answers[$q->id]) ? 'btn-success' : 'btn-outline-secondary' }} {{ $currentQuestionIndex == $idx ? 'active' : '' }}">
+                               class="btn btn-sm q-nav-btn {{ !empty($answers[$navQid]) ? 'btn-success' : 'btn-outline-secondary' }} {{ $currentQuestionIndex == $idx ? 'active' : '' }}">
                                 {{ $idx+1 }}
                             </button>
                         @endforeach
