@@ -444,21 +444,31 @@
         color: #64748b;
     }
 
+    .month-select-input option,
+    select option {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+    }
+
     body.dark-skin .bg-light-gray {
         background-color: #0f172a !important;
     }
 
     body.dark-skin .month-select-pill {
-        background: #1e293b;
-        border-color: #334155;
+        background: #1e293b !important;
+        border-color: #334155 !important;
     }
 
     body.dark-skin .month-select-label {
-        color: #94a3b8;
+        color: #94a3b8 !important;
     }
 
-    body.dark-skin .month-select-input {
-        color: #f1f5f9;
+    body.dark-skin .month-select-input,
+    body.dark-skin select,
+    body.dark-skin .month-select-input option,
+    body.dark-skin select option {
+        background-color: #1e293b !important;
+        color: #f1f5f9 !important;
     }
 
     body.dark-skin .full-school-calendar {

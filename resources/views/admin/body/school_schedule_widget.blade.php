@@ -171,16 +171,23 @@
         box-shadow: 0 1px 2px rgba(0,0,0,0.04);
     }
 
-    .month-select-input {
-        border: 0;
-        background: transparent;
-        font-size: 11px;
-        font-weight: 700;
-        color: #0f172a;
-        outline: none;
-        cursor: pointer;
-        height: 20px;
-        padding: 0;
+    .month-select-input option,
+    select option {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+    }
+
+    body.dark-skin .month-select-pill {
+        background: #1e293b !important;
+        border-color: #334155 !important;
+    }
+
+    body.dark-skin .month-select-input,
+    body.dark-skin select,
+    body.dark-skin .month-select-input option,
+    body.dark-skin select option {
+        background-color: #1e293b !important;
+        color: #f1f5f9 !important;
     }
 
     .school-schedule-widget .event-calendar-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:4px; }
